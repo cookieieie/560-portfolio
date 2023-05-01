@@ -1,0 +1,165 @@
+---
+title: "Deep Learning for TS"
+---
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(astsa) 
+library(xts)
+library(tseries)
+library(fpp2)
+library(fma)
+library(lubridate)
+library(tidyverse)
+library(TSstudio)
+library(quantmod)
+library(tidyquant)
+library(plotly)
+library(ggplot2)
+```
+
+```{r,echo=FALSE}
+amzn <- read.csv("./data/yahoo/tech/AMZN.csv")
+goog <- read.csv("./data/yahoo/tech/GOOG.csv")
+msft <- read.csv("./data/yahoo/tech/MSFT.csv")
+aapl <- read.csv("./data/yahoo/tech/AAPL.csv")
+tsla <- read.csv("./data/yahoo/tech/TSLA.csv")
+meta <- read.csv("./data/yahoo/tech/META.csv")
+
+colnames(amzn)[6] = "AMZN"
+colnames(goog)[6] = "GOOG"
+colnames(msft)[6] = "MSFT"
+colnames(aapl)[6] = "AAPL"
+colnames(meta)[6] = "META"
+colnames(tsla)[6] = "TSLA"
+
+amzn$Date <- as.Date(amzn$Date, "%Y-%m-%d")
+meta$Date <- as.Date(meta$Date, "%Y-%m-%d")
+tsla$Date <- as.Date(tsla$Date, "%Y-%m-%d")
+goog$Date <- as.Date(goog$Date, "%Y-%m-%d")
+aapl$Date <- as.Date(aapl$Date, "%Y-%m-%d")
+msft$Date <- as.Date(msft$Date, "%Y-%m-%d")
+
+df <- amzn %>% inner_join(meta, by = c('Date'))
+df <- df[-c(2:5,7:11, 13)]
+df <- df %>% inner_join(tsla, by=c('Date'))
+df <- df[-c(4:7,9)]
+df <- df %>% inner_join(msft, by=c("Date"))
+df <- df[-c(5:8,10)]
+df <- df %>% inner_join(aapl, by=c('Date'))
+df <- df[-c(6:9,11)]
+df <- df %>% inner_join(goog, by=c('Date'))
+stock <- df[-c(7:10,12)]
+
+#head(stock)
+```
+
+# Overview of Original Data
+
+Here is a recap and overview of the uni-variate time-series data from ARMA/ARIMA/SARIMA Models page. The data used was the META stock prices from 2012 to 2022, with a frequency of 4, a quarterly data obtained from Yahoo Finance. The same data will be used for this page in creating three deep learning neural network models, so that there is a clear comparison among the best `ARIMA` model built previously and the three neural network models. Both of the original data and the log transformation of data are plotted below.
+
+Sometimes, by taking the log transformation is useful to remove the heteroskedasticity of the original data, while sometimes it will make the data worse. To explore the effect of taking log transformation, both the original time series and the log time series are plotted below, and we see that there are not obvious heteroskedasticity from the original plot and by taking the log, it may not have a positive impact to the data, even though the variance is reduced a little bit.
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+require(gridExtra)
+
+p1 <- ggplot(stock, aes(x=Date)) +
+  geom_line(aes(y=META), color="blue")+
+   labs(
+    title = "Stock Prices for META from 2012 to 2022",
+    x = "Date",
+    y = "Adjusted Closing Prices")
+
+p2 <- ggplot(stock, aes(x=Date)) +
+  geom_line(aes(y=log(META)), color="red")+
+   labs(
+    title = "Log: Stock Prices for META from 2012 to 2022",
+    x = "Date",
+    y = "Adjusted Closing Prices")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+# Deep Learning Time-Series Models
+
+The original data META adjusted stock prices was read in and transformed into range from 0 to 1 by using the `MinMaxScaler` function from `sklearn` in python. This step aims to transform our target variable within a bounded range and contributes equally to further analysis. Next, the data is split into a training and testing set with a 70-30 split. Each of the three neural network models are trained using the training data set, and then are predicted on both training and testing data sets to get the RMSE from all the three models. All the three models are trained using `TensorFlow` and `Keras` packages with three hidden units, one dense unit, and `Tanh` activation function. `Tanh` is a non-linear activation function. It regulates the values flowing through the network, maintaing the values between -1 and 1. Moreover, for each of neural network model, L1L2 regularization are also added to prevent the problem of overfitting, where `L1` penalizes the sum of the absolute values of the weights and `L2` penalizes the sum of the square of the weights.
+
+## Recurrent Neural Networks (RNN)
+
+A Recurrent Neural Network (RNN) is a type of artificial neural network which uses sequential data or time series data. It is distinguished by their "memory" as it takes information from prior inputs to influence the current input and output. RNNs share the same weight parameter within each layer of the network, but these weights are still adjusted in the processes of back-propagation and gradient descent to facilitate reinforcement learning.
+
+The plot below is the META actual scaled adjusted closing stock prices and the predicted scaled adjusted closing stock prices forecasting with L1L2 regularization with the Recurrent Neural Network (RNN) model. It is clear that the predicted adjusted closing prices are pretty close to the actual stock prices until the time steps of around 90, which means the prediction power of the RNN model is not bad. After that, there are some deviations between the actual and predicted values.
+
+![](rnn.png)
+
+## Long Short Term Memory (LSTM) Neural Networks
+
+Long Short Term Memory (LSTM) is a special kind of RNN capable of learning long term sequences. It is explicitly designed to avoid long term dependency problems. The popularity of LSTM is due to the gating mechanism involved with each LSTM cell, which controls the memorizing process. Information in LSTMs can be stored, written, or read via gates that open and close. The three gates that LSTM uses are input gate, forget gate, and output gate.
+
+The plot below is the META actual scaled adjusted closing stock prices and the predicted scaled adjusted closing stock prices forecasting with L1L2 regularization with the Long Short Term Memory (LSTM) Neural Network model. This plot is pretty similar to the above RNN prediction plot. Both models have pretty good prediction powers until time steps before 90, but decreasing in accuracy after that. The prediction is least accurate around times steps of 100 to 110, which may be due to the huge stock price fluctuations of META from the last quarter of 2021 and the first quarter of 2022, and both of the RNN and LSTM model did not fully captured the large fluctuations around this time period. And after time steps of 110, the predictions become pretty good again.
+
+![](lstm.png)
+
+## Gated Recurrent Unit (GRU) Neural Networks
+
+The workflow of the Gated Recurrent Unit (GRU) is the same as the RNN but the difference is in the operation and gates associated with each GRU unit. To solve the vanishing gradient problem of a standard RNN, GRU uses update gate and reset gate, which are two vectors that decide what information should be passed to the output. The special thing about them is that they can be trained to keep information from long ago, without washing it through time or remove information which is irrelevant to the prediction.
+
+The plot below is the META actual scaled adjusted closing stock prices and the predicted scaled adjusted closing stock prices forecasting with L1L2 regularization with the Gated Recurrent Unit (GRU) Neural Network model. Similar problem for GRU model here, as the above two neural network models. However, the prediction power of GRU model seems to be a little bit better for the time steps between 100 and 110 than the two models above. One guess about the reason that GRU model predicted better is that the two gates mechanism from GRU did a good job on keeping all the information that were trained from a long time ago, which could be helpful for the model to capture the huge fluctuations in the later times.
+
+![](gru.png)
+
+## DL Model Comparisons
+
+Now, let's compare the three neural network models in terms of their RMSE on both training and testing data sets. From the above discussions for each of the three plots, it can be decided that both of the RNN and GRU neural network models are slightly better in prediction power compared to the LSTM model. How about their respective RMSE scores in a side by side comparison? Are these two models still the best with the lowest error terms?
+
+The table below summarizes the training set RMSE scores and testing set RMSE scores for the three neural network models, and their respective L1L2 regularization models, so in total there are six model performances to be compared. The RNN model without regularization has a training RMSE of 0.2148 and testing RMSE of 0.2541, while the RNN model with regularization has a bit lower training RMSE and a bit higher testing RMSE. Even though these are just small discrepancies, we expect the testing RMSE for the latter model to be lower than the one without regularization. For the two LSTM models, the one with regularization has a testing RMSE of 0.2605, which is lower than that of the one without regularization 0.2701. This is a good sign of effectively using regularization in the neural network models, but the problem for LSTM models is that the discrepancies between training and testing RMSEs are a little bit larger than RNN and GRU neural network models, and this may lead to some concerns on overfitting. Finally, the GRU model with regularization still turn out to be very effective with a desirable error result, since its testing RMSE reduced about 0.01 and the overfitting problem seems to be fixed as well.
+
+Overall, the best two neural network models, the RNN with regularization and GRU with regularization, have pretty much the same result in terms of RMSE scores for training and testing data sets. This result also complies with the above prediction plots that both of the two models have very similar prediction powers and very similar RMSE scores.
+
+```{r, echo=FALSE}
+# show rmse for three dl models
+rmse.table <- read_csv('rmse_table.csv',show_col_types = FALSE)
+knitr::kable(rmse.table)
+```
+
+# Compare with ARIMA Model
+
+Below is a recap of the forecasting plot from the best fitted ARIMA (3,1,3) model with a log transformation of the original data. This forecast plot implies a pretty slightly increasing trend with a confidence band, and the confidence band is pretty wide with an upper and lower limit. This forecast of course could not predict the future external factors that could potentially affect the stock prices significantly, such as economic downturn or company financial crisis. So, the ARIMA model has done a descent job on forecasting overall.
+
+![](arima_forecast.png){width="480"}
+
+Now let's compare the RMSE scores for the ARIMA model fitted from the ARMA/ARIMA/SARIMA section with the three neural network models. The table below we have already seen from the DL model comparison section, and concluded that both of the RNN with regularization and GRU neural network with regularization have the best model performances with relatively low training and testing RMSE scores.
+
+```{r, echo=FALSE}
+# show rmse for three dl models
+rmse.table <- read_csv('rmse_table.csv',show_col_types = FALSE)
+knitr::kable(rmse.table)
+```
+
+This table below is a recap of the ARIMA models fitted for the same uni-variate time-series data, META stock prices from the previous section. There are four models in total with their respective RMSE scores, with our best fitted model on the top, following by three benchmark models. It is clear that neural network models have far lower RMSE scores of 0.2572 (testing RMSE of the GRU with regularization model), even compared to the our best fitted ARIMA model with a RMSE of 15.2178, not to say the other three benchmark models. Therefore, neural network models could produce more accurate and better results with lower error terms. However, building neural network models is a more complicated and time consuming process than setting up ARIMA or SARIMA models to have a quick and better understanding of a time-series data. It depends on needs to choose which specific model to be utilized.
+
+```{r, message=FALSE, echo=FALSE}
+# compare rmse from dl models with arima model
+# show arima model rmse
+arima.rmse <- read_csv("arima_rmse.csv", show_col_types = FALSE)
+colnames(arima.rmse)[1] <- ""
+# keep only the RMSE values
+arima.rmse <- subset(arima.rmse, select = -c(MAE, MASE))
+knitr::kable(arima.rmse)
+```
+
+# Works Cited
+
+Jason Brownlee, June 10, 2020, Machine Learning Mastery, How to Use StandardScaler and MinMaxScaler Transforms in Python, https://machinelearningmastery.com/standardscaler-and-minmaxscaler-transforms-in-python/
+
+Richmond Alake, May 5, 2020, Medium, Regularization Techniques And Their Implementation In TensorFlow(Keras), https://towardsdatascience.com/regularization-techniques-and-their-implementation-in-tensorflow-keras-c06e7551e709
+
+Vijaysinh Lendave, August 28, 2021, Mystery Vault, LSTM Vs GRU in Recurrent Neural Network: A Comparative Study, https://analyticsindiamag.com/lstm-vs-gru-in-recurrent-neural-network-a-comparative-study/
+
+Gaurav Singhal, Sep 9, 2020, Pluralsight, Introduction to LSTM Units in RNN, https://www.pluralsight.com/guides/introduction-to-lstm-units-in-rnn
+
+Simeon Kostadinov, Dec 16, 2017, Medium, Understanding GRU Networks, https://towardsdatascience.com/understanding-gru-networks-2ef37df6c9be
+
+IBM newsletter, What are recurrent neural networks?, https://www.ibm.com/topics/recurrent-neural-networks

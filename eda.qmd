@@ -1,0 +1,217 @@
+---
+title: "Exploratory Data Analysis"
+---
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(astsa) 
+library(xts)
+library(tseries)
+library(fpp2)
+library(fma)
+library(lubridate)
+library(tidyverse)
+library(TSstudio)
+library(quantmod)
+library(tidyquant)
+library(plotly)
+library(ggplot2)
+```
+
+```{r,echo=FALSE}
+amzn <- read.csv("./data/yahoo/AMZN.csv")
+goog <- read.csv("./data/yahoo/GOOG.csv")
+msft <- read.csv("./data/yahoo/MSFT.csv")
+aapl <- read.csv("./data/yahoo/AAPL.csv")
+tsla <- read.csv("./data/yahoo/TSLA.csv")
+meta <- read.csv("./data/yahoo/META.csv")
+
+colnames(amzn)[6] = "AMZN"
+colnames(goog)[6] = "GOOG"
+colnames(msft)[6] = "MSFT"
+colnames(aapl)[6] = "AAPL"
+colnames(meta)[6] = "META"
+colnames(tsla)[6] = "TSLA"
+
+amzn$Date <- as.Date(amzn$Date, "%Y-%m-%d")
+meta$Date <- as.Date(meta$Date, "%Y-%m-%d")
+tsla$Date <- as.Date(tsla$Date, "%Y-%m-%d")
+goog$Date <- as.Date(goog$Date, "%Y-%m-%d")
+aapl$Date <- as.Date(aapl$Date, "%Y-%m-%d")
+msft$Date <- as.Date(msft$Date, "%Y-%m-%d")
+
+df <- amzn %>% inner_join(meta, by = c('Date'))
+df <- df[-c(2:5,7:11, 13)]
+df <- df %>% inner_join(tsla, by=c('Date'))
+df <- df[-c(4:7,9)]
+df <- df %>% inner_join(msft, by=c("Date"))
+df <- df[-c(5:8,10)]
+df <- df %>% inner_join(aapl, by=c('Date'))
+df <- df[-c(6:9,11)]
+df <- df %>% inner_join(goog, by=c('Date'))
+stock <- df[-c(7:10,12)]
+
+#head(stock)
+```
+
+# Overview
+
+In this exploratory data analysis section, time series components, lag plots, decomposition of time series, autocorrelation of time series, and detrended time series will be discussed for several stocks with the specific interests, such as Apple, Meta, and Tesla, which can help to answer some questions from the introduction section.
+
+# Time Series Plot
+
+The original time series plot for stock price of META ranging from 2012 to 2022 is shown below. Different from the plot from previous section of data visualization, this plot shows only the stock prices of META. This plot shows a clear increasing trend of the adjusted closing price for META within this time period.
+
+There are also a lot of huge and small fluctuations all the time, with the biggest drop in price between the last quarter of 2021 and the first quarter of 2022. Strangely, even the COVID-19 pandemic did not impact the stock market of META, after that most difficult time, META was beset into a crisis in stock market. The reasons for this was discussed in the previous section, to summarize, are the huge investments into metaverse for a long time period, declining in profits due to the competitions from TikTok, and a broad slowdown in online advertisement spending and challenges from Apple's iOS privacy update. There were not clear observable seasonality from this plot, and it is not stationary due to the trend and changing levels over time. The time series plot for META looks more like additive rather than multiplicative, even though there is a huge fluctuation presenting, therefore, "additive" is used in the later section in this page for the decomposition of time series.
+
+```{r,echo=FALSE}
+g<- ggplot(stock, aes(x=Date)) +
+  geom_line(aes(y=META, colour="META"))+
+   labs(
+    title = "Stock Prices for META from 2012 to 2022",
+    x = "Date",
+    y = "Adjusted Closing Prices")+
+    guides(colour=guide_legend(title="META")) 
+
+
+ggplotly(g) %>%
+  layout(hovermode = "x")
+```
+
+# Lag Plots and Autocorrelation
+
+The plots shown below are multiple lag plots for the stock prices of META. There isn't an observable seasonality by looking at the lag plots, and most of the lag plots show a linear like pattern, which suggests positive autocorrelation is present as the lines going in a positive linear trend going upwards from left to right. As the number of lag increases, the autocorrelation decreases little by little, while the first lag plot looks pretty much similar to a perfectly autocorrelated pattern that data almost cluster in a single diagonal line. There are not obvious outliers showing in the lag plots.
+
+```{r,message=FALSE,warning=FALSE, echo=FALSE}
+
+# meta<-ts(stock$META,star=decimal_date(as.Date("2012-06-01",format = "%Y-%m-%d")),frequency = 365.25)
+
+# Get mean value for each month
+mean_data <- stock %>% 
+  mutate(month = month(Date), year = year(Date)) %>% 
+  group_by(year, month) %>% 
+  summarize(mean_value = mean(META))
+
+# create monthly time series data
+meta_month<-ts(mean_data$mean_value,start=decimal_date(as.Date("2012-06-01",format = "%Y-%m-%d")),frequency = 12)
+
+gglagplot(meta_month, do.lines = FALSE) + ggtitle("META Stock Price Lag Plot")
+```
+
+# Decomposed Time Series
+
+To perform the decomposition of time series step, for the stock prices of META, "additive" is chosen for the necessary decomposition. The trend is slightly increasing at the beginning and then quickly increasing until a time stamp and then dropping very quickly after that. While there is a seasonal component showing in the decomposed plot, the remainders cannot be overlooked. The remainders of data are pretty high between year 2020 and 2022, which means not clear seasonality in the original plot.
+
+```{r,echo=FALSE}
+decompose_meta <- decompose(meta_month, "additive")
+autoplot(decompose_meta)
+```
+
+# Detrended Time Series with ACF and PACF on Autocorrelation
+
+Analyzing the autocorrelation function (ACF) and partial autocorrelation function(PACF) are necessary for a time series, because they help to uncover hidden patterns in our data and help to select the correct forecasting methods and models in the later sections. Autocorrelation represents the degree of similarity between a given time series and a lagged version of itself over successive time intervals, so in other words, it is a measure of the relationship between the current value and its past values of a variable.
+
+The assumption to perform ACF to a time series is that there should be a weak stationary present in the data, meaning no systematic change in the mean, variance, and no systematic fluctuation. However, the data for the stock prices of META over the 10 years having a huge fluctuation, so the step of detrending is necessary to remove any trends present in the data and to make sure the data becomes stationary before performing ACF.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+# create detrending plot
+
+fit <- lm(meta_month~time(meta_month), na.action = NULL)
+#summary(fit1)
+
+y <- stock$META
+x <- stock$Date
+
+g1 <- ggplot(stock, aes(Date, META)) +           
+  geom_line()
+
+g1 + stat_smooth(method="lm",
+                formula = y~ x,
+                geom="smooth")+
+  ggtitle("Stock Prices for META from 2012 to 2022")+
+  ylab("Adjusted Closing Price")
+
+```
+
+Linear model (lm) function is used to perform the detrending time series process. The two plots below show the original plot and the detrended data plot respectively. This process is useful to remove the increasing linear trend presenting in the original plot, while the big fluctuation still presents in the detrended data plot.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+require(gridExtra)
+plot1 <- autoplot(meta_month, main="Original Plot")
+plot2 <- autoplot(resid(fit), main="Detrended Plot")
+grid.arrange(plot1, plot2,nrow=2)
+```
+
+Plots below are a comparison between the original data ACF, first differenced data, detrended data ACF and PACF. It is clear that the original data ACF is not stationary that there are such strong autocorrelation at lag 1,2,3 ... etc., which is a problem in a ACF plot, and this is due to the linear increasing trend presents in the original data. After removing the linear trend in the previous step, the detrended data plot of ACF and PACF look much better then. Most of correlation of the lags are closer to 0, which is a significant improvement, even though there are still some high correlation at the beginning lags, and it is still non-stationary. The first differenced data plot looks stationary, since most of the correlations lies within the 95% confidence interval and are closer to 0.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+plot1 <- ggAcf(meta_month, 100, main="Original Data ACF: META")
+plot2 <- ggAcf(diff(meta_month), 100, main="First Differenced Data: META")
+plot3 <- ggAcf(resid(fit), 100, main="Detrended Data ACF: META") 
+plot4 <- ggPacf(resid(fit), 100, main ="Detrended Data PACF: META")
+
+grid.arrange(plot1, plot2, plot3, plot4, nrow=2)
+
+```
+
+This is a Augmented Dickery-Fuller Test to see whether the data is stationary. The result of p-value below is less than 0.05, indicating there are enough evidence to reject the null hypothesis at 5% significant level, so obviously the series in stationary after first differentiation. This result also complies with the above ACF plot of the first differenced data of META.
+
+```{r, warning=FALSE, echo=FALSE}
+tseries::adf.test(diff(meta_month))
+```
+
+# Moving Average Smoothing
+
+```{r, echo=FALSE}
+options("getSymbols.warning4.0"=FALSE)
+options("getSymbols.yahoo.warning"=FALSE)
+
+meta <- getSymbols("META",auto.assign = FALSE, from = "2012-06-01",src="yahoo") 
+
+meta <- data.frame(meta)
+
+meta <- data.frame(meta, rownames(meta))
+
+colnames(meta)[7] <- "Date"
+
+meta$Date<-as.Date(meta$Date,"%Y-%m-%d")
+
+#head(meta)
+
+meta_ma_50 <- rollapply(meta$META.Adjusted, 50, mean, fill=NA)
+meta_ma_200 <- rollapply(meta$META.Adjusted, 200, mean, fill=NA)
+meta_ma_500 <- rollapply(meta$META.Adjusted, 500, mean, fill=NA)
+
+ma <- data.frame(meta_ma_50, meta_ma_200, meta_ma_500)
+
+meta_ma <- data.frame(meta, ma)
+
+#head(meta_ma)
+#tail(meta_ma)
+```
+
+The moving average smoothing plot below contains three different moving average windows, one is 50 days MA, which is the smallest window, one is 200 days MA, which is a slightly larger window, and the other one is 500 days MA, which is the largest window. The smaller the moving average window, the closer the moving average line lies to the original candlestick plot, so the largest window of 500 days indicates an overall trend of the market. To see whether the META stock market is reacting to the moving average crossovers, we need to check whether the moving average trend is following the market direction. For example, around June 2017, the three moving average lines cross over together, and all the three lines are going up so that the market is going up at the same time period, and this is a sign of following market direction for crossover points. The same thing happened around August 2018, August 2020, and February 2022. Therefore, we can conclude that it is reliable to use moving average crossover strategy for the META stock market since the market reacts to the crossovers. The rule is that if the short-term moving average line crosses above the long-term moving average line, we should take a buy position on the crossover point, otherwise we take a sell position. However, we should know that the crossover moving average lines should not be used as the sole method for making investment decisions.
+
+```{r,message=FALSE, warning=FALSE, echo=FALSE}
+# basic candlestick chart with moving average lines
+figc <- meta_ma %>% plot_ly(x = ~Date, type="candlestick",
+          open = ~META.Open, close = ~META.Adjusted,
+          high = ~META.High, low = ~META.Low) 
+
+figc <- figc %>% layout(title = "META Moving Avgerage Stock Price Candlestick Chart", width=800, height=500,  
+                        xaxis = list(title = 'Date'), yaxis = list(title = 'Adjusted Closing Price')) %>%
+  add_lines(x= ~Date, y=~meta_ma_50, line=list(color="darkblue"), name="50 days MA") %>%
+  add_lines(x= ~Date, y=~meta_ma_200, line=list(color="orange"), name="200 days MA") %>%
+  add_lines(x= ~Date, y=~meta_ma_500, line=list(color="green"), name="500 days MA")
+  
+
+figc
+```
+
+# Works Cited
+
+Dipanwita Mallick, Interpreting ACF or Auto-correlation plot, Medium, Nov. 25, 2020, https://medium.com/analytics-vidhya/interpreting-acf-or-auto-correlation-plot-d12e9051cd14
+
+Roger D. Peng, A Very Short Course on Time Series Analysis, 2.8 Autocorrelation, Apr. 02, 2020, https://bookdown.org/rdpeng/timeseriesbook/autocorrelation.html

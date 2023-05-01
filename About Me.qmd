@@ -1,0 +1,15 @@
+---
+title: "About Me"
+---
+
+## Yiming Chen
+
+Georgetown ID: yc1066
+
+Georgetown Email: yc1066\@georgetown.edu
+
+![](yc2.JPG){width="50%"}
+
+Hi, this is Yiming Chen : )
+
+Currently I am a first year Data Science and Analytics (DSAN) student at the Georgetown University. I was a Business Administration major focused on finance and economics minor student in the Warrington College of Business at the University of Florida, graduated in April, 2022. With this business background, combined with a data science degree, I hope to be a data analyst or data scientist in tech or fin-tech industry after graduation in 2024. In this two years, I will learn more about the technical parts, such as using python or R to perform data visualizations and build machine learning models. I enjoy playing volleyballs (even though didn't get a chance to play for a long time, looking forward to meet my friends to play again), cooking, watching TV series, writing journals and working out. Nice to meet you!

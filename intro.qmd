@@ -1,0 +1,39 @@
+---
+title: "Introduction"
+---
+
+## Backgrounds
+
+![](stock.jpeg)
+
+The term stock market refers to several exchanges in which shares of publicly held companies are bought and sold everyday through the market. Such financial activities are conducted through formal exchanges and via over-the-counter (OTC) marketplaces that operate under a defined set of regulations. Stock markets are components of a free-market economy because they enable democratized access to investor trading and exchange of capital. The U.S. stock market is regulated by Securities and Exchange Commission (SEC) and local regulatory bodies. Stock market indexes around the world are powerful indicators for global and country-specific economies. In the United States, the S&P 500, Dow Jones Industrial Average (The Dow), and Nasdaq Composite are the three most broadly followed indexes by both the media and investors.
+
+![](stock01.jpeg)
+
+Specifically, the Dow contains 30 stocks, and it is represented by a very large value increasing or decreasing based on the performances of those stocks. The Dow is calculated by the sum of the prices of the 30 stocks divided by a set divisor, which is really small over time. The Dow is one of the most closely watch indices in the world as it's an indicator of how shares of some of the largest U.S. companies are performing. Also, since the Dow include the top U.S. companies from multiple industries it's commonly used as an indicator of how the U.S. market as a whole is performing. The S&P 500 contains 500 stocks, which may be a better indicator of the U.S. market and the economy as a whole, rather than the Dow, due to having larger numbers of stocks. It is a market capitalization weighted index, therefore, the higher the market capitalization a company has, the higher weight it has on the S&P 500 index. And last but not least, the Nasdaq Composite Index contains roughly 3000 stocks exclusively on Nasdaq, and it is also a market-cap weighted index like the S&P 500. Nasdaq is a good indicator of performance for the technology and internet sector.
+
+## Important Questions
+
+1.  Are we able to predict Apple's stock prices for the next three year based on current available stock prices?
+2.  Are we able to predict Meta's stock prices for the next three year based on current available stock prices?
+3.  Are we able to predict Tesla's stock prices for the next three years based on current available stock prices?
+4.  What are the trends of stock prices of the 5 most valuable tech companies until now?
+5.  Are there clear seasonal components for certain stocks and why?
+6.  Is there a relationship between GDP and stock prices for certain companies in the United States?
+7.  Is consumer price index (CPI) an important indicator for GDP?
+8.  Is unemployment rate an important indicator for GDP?
+9.  In which years specifically, the stock market has been impacted the most heavily by the economic factors?
+10. Does cryptocurrency market has the same trend as the stock markets overall?
+
+
+## Works Cited
+
+Whyze, July 05, 2019, "What Are Stock Market Indicies? (S&P 500, Dow Jones, & NASDAQ Explained)", https://www.youtube.com/watch?v=y-RGEos-lus
+
+James Chen, July 07, 2022, "What Is the Stock Market, What Does It Do, and How Does It Work?", https://www.investopedia.com/terms/s/stockmarket.asp#:\~:text=Stock%20markets%20are%20venues%20where,price%20discovery%20and%20efficient%20dealing.
+
+Caroline Banton, March 29, 2022, "An Introduction to U.S. Stock Market Indexes", https://www.investopedia.com/insights/introduction-to-stock-market-indices/#:\~:text=The%20three%20most%20widely%20followed,Industrial%20Average%2C%20and%20Nasdaq%20Composite.
+
+Photographer: Patricia Monteiro/Bloomberg, Nov. 08, 2021, "Stock activity on an electronic board at the B3 stock exchange in Sao Paulo, Brazil, on Monday", https://www.bloomberg.com/news/articles/2022-04-06/goldman-skeptical-on-brazil-s-world-beating-stock-market-rally?leadSource=uverify%20wall
+
+Lucy Bayly, March 16, 2020, "Dow slides 3,000 points in grisly day on Wall Street, despite massive intervention from Fed", https://www.nbcnews.com/business/markets/dow-falls-2-200-points-trading-halted-rate-cut-fails-n1160246

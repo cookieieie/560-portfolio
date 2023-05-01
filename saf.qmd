@@ -1,0 +1,375 @@
+---
+title: "ARIMAX/SARIMAX/VAR"
+---
+
+# Literature Review
+
+The overall **ULTIMATE GOAL** of this project is to investigate how different multiple factors influence the stock market, especially the economic factors and weather factors. For the economic factors, such as GDP, Consumer Price Index (CPI), Unemployment Rate, Interest Rate, Inflation etc, will be chosen and conducted for specific sectors of the stock market (e.g. health care) in the following ARIMAX models. For the weather factors, such as extreme temperature, flood, and drought will be selected and conducted for specific sectors of the stock market (e.g. energy and real estate) in the following model.
+
+From literature review research, the economic factors ar key for investors to buy or sell in the whole stock market. An individual company's profit, revenue, and debt load are not the only things driving its stock price, but a number of economic indicators drive broader market sentiment, which in turn affects individual stock prices to varying degrees. In other words, economic news matters to the stock market because as the economy goes, so does the company profitability. Many companies whose shares trade on the stock market rely on a good economic environment. When the economy is expanding, more people are buying goods and services, and more likely to invest. All of these provide supports to stock prices. Conversely, when the economy struggles, people tend to avoid spending and companies, and their stocks, see a decline.
+
+![](pic.webp)
+
+Based on research, there are six very important economic factors that affect the stock markets, and below are the explanations for each factor:
+
+-   *GDP*: GDP is the most comprehensive economic indicator, which measures the value of all goods and services produced in a country during a specific time period. This measurement has an effect on the stock market because a stock's price generally reflects expectations of a company's future profitability. When an economy is healthy and growing, businesses are more likely to report better earnings and growth, and vice versa.\
+-   *Unemployment*: Like GDP, the unemployment rate reflects strength or weakness in the economy. More people with jobs equates to higher retail sales, economic output, and corporate profits.\
+-   *Consumer price indexes*: CPI measures price changes in a range of goods and services. It is important because rising inflation, which is higher prices, can hurt consumer spending, which makes up more than two-thirds of the GDP, and cause the Federal Reserve to raise interest rates to control price gains.\
+-   *Retail sales*: Any extended drop-off in retail spending could be taken as a sign of a downturn in the economy, affecting business profits and hiring.\
+-   *Interest rates*: When interest rates are higher, it makes money more expensive to borrow, eating into company profit margins. With lower profits, stock prices are likely to drop, and vice versa.\
+-   *Inflation (or Deflation)*: Like mentioned above in CPI, price pressure also has an influence on the stock market. Inflation, which is upward price pressure, makes things more expensive. With high inflation, buying power is decreased to a degree that concerns that companies will hoard their money become an issue, and that may lead to decrease in certain stock prices.
+
+Based on the information above, and data availability, for the following models in this page, five economic factors from the above, **GDP**, **Consumer Price Index (CPI)**, **Unemployment rate**, **Interest Rate**, and **Inflation** are going to be selected and used to see how they impact the stock markets overall.
+
+# ARIMAX Model
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(astsa) 
+library(xts)
+library(tseries)
+library(fpp2)
+library(fma)
+library(lubridate)
+library(tidyverse)
+library(TSstudio)
+library(quantmod)
+library(tidyquant)
+library(plotly)
+library(ggplot2)
+```
+
+## Get Information for the Original Data
+
+```{r, echo=FALSE}
+unh <- read.csv("./data/yahoo/healthcare/UNH.csv")
+gdp <- read.csv("./data/fred/GDP.csv")
+cpi <- read.csv("./data/fred/CPI.csv")
+unrate <- read.csv("./data/fred/UNRATE.csv")
+int <- read.csv("./data/fred/interest_rate.csv")
+inf <- read.csv("./data/fred/Inflation_EOP.csv")
+
+# rename Date to DATE for CVS df
+colnames(unh)[1] <- c("DATE")
+
+#head(unh)
+```
+
+First let's begin with our dataset. Below is a glance for the data we are going to use to build a ARIMAX model to predict the UnitedHealth Group Incorporated (UNH) stock price, which is from the health care sector of the stock market, with several important economic factors mentioned at the beginning of the literature review section.
+
+```{r, echo=FALSE}
+df_list <- list(unh, gdp, cpi, unrate, int, inf)
+# merge the 6 dataframes 
+data <- Reduce(function(x,y) merge(x,y, all=TRUE), df_list)
+# remove all the rows with NAs
+data <- na.omit(data)
+# reset row indexes
+rownames(data) <- 1:nrow(data)
+
+# drop columns from CVS dataframe and keep only the adjusted close price
+data <- data[-c(2:5,7)]
+
+data$DATE <- as.Date(data$DATE, "%Y-%m-%d")
+
+# rename the columns
+colnames(data)[2] <- c("UNH")
+colnames(data)[4] <- c("CPI")
+colnames(data)[6] <- c("Int_rate")
+colnames(data)[7] <- c("Inflation")
+
+# convert inflation from char to numeric
+data$Inflation <- as.numeric(data$Inflation)
+
+head(data)
+#tail(data)
+```
+
+Below is a data visualization for each column from the above data set. UNH on the top is the response variable and the other five variables are the predictors that are going to used in the ARIMAX model. We see that the GDP, CPI and stock price for UNH look pretty similar in terms of trend and seasonality.
+
+```{r, echo=FALSE}
+data.ts <- ts(data, start=c(2003,4), end=c(2022,10), frequency=4)
+
+autoplot(data.ts[,c(2:7)], facets=TRUE) +
+  xlab("Year") + ylab("") +
+  ggtitle("Economic Factors Influencing UNH Stock Prices")
+```
+
+## Two Ways of Model Fitting
+
+Now we are going to fit models and find out the best model that is going to be used for forecasting in the end. Two methods of model fitting are going to be use: `auto.arima()` directly from the `R` library, and manually fitting model. Two to three models will be produced and we are going to select one best model based on the lowest RMSE scores in the end.
+
+### Fitting Model Using `"auto.arima()"`
+
+Below is the model summary that is fitted using `"auto.arima()"`, and it give a model of ARIMA(1,0,0)(0,0,1)\[4\], with the response variable of UNH stock price and five predictors: GDP, CPI, Unemployment rate, interest rate, and inflation.
+
+```{r, echo=FALSE}
+xreg <- cbind(GDP = data.ts[,"GDP"],
+              CPI = data.ts[,"CPI"],
+              UNRATE = data.ts[,"UNRATE"],
+              Int_rate = data.ts[,"Int_rate"],
+              Inflation = data.ts[,"Inflation"])
+
+auto.fit <- auto.arima(data.ts[,"UNH"], xreg=xreg)
+summary(auto.fit)
+```
+
+From the model diagnostic of the automatically fitted model, both of the ACF lag plot and residuals plot look pretty good as all the lags are inside of the confidence bands, and the residuals are almost normally distributed with a mean centered around 0.
+
+```{r, echo=FALSE}
+checkresiduals(auto.fit)
+```
+
+### Fitting Model Manually
+
+Here we are fitting the model manually, with the same five predictors mentioned above. Below is a summary output of a linear regression, with UnitedHealth Group Incorporated stock price as the response variable, and GDP, CPI, Unemployment rate, Interest rate, and Inflation as predictors fitting the linear model. From the p-values of this summary output, we see that all the five variables are statistically significant to the response variable, since all of them are less than 0.05. This is a good sign that we are picking the right variables for prediction.
+
+```{r, echo=FALSE}
+data$UNH <- ts(data$UNH,star=decimal_date(as.Date("2003-04-01",format = "%Y-%m-%d")), frequency = 4)
+data$GDP <- ts(data$GDP, star=decimal_date(as.Date("2003-04-01",format = "%Y-%m-%d")), frequency = 4)
+data$CPI <- ts(data$CPI, star=decimal_date(as.Date("2003-04-01",format = "%Y-%m-%d")), frequency = 4)
+data$UNRATE <- ts(data$UNRATE, star=decimal_date(as.Date("2003-04-01",format = "%Y-%m-%d")), frequency = 4)
+data$Int_rate <- ts(data$Int_rate, star=decimal_date(as.Date("2003-04-01",format = "%Y-%m-%d")), frequency = 4)
+data$Inflation <- ts(data$Inflation, star=decimal_date(as.Date("2003-04-01",format = "%Y-%m-%d")), frequency = 4)
+
+fit.reg <- lm(UNH ~ GDP+CPI+UNRATE+Int_rate+Inflation, data=data)
+summary(fit.reg)
+```
+
+By looking at the ACF and PACF plot of the residuals from the above linear model, there shows some seasonality from both plots since there are some lags out of the confidence bands, and this means that the original residuals still have seasonal components, but not a lot. We need to further difference the residuals of the fitted linear regression model in the next step.
+
+```{r, echo=FALSE}
+res.fit <- ts(residuals(fit.reg), frequency=4)
+
+#par(mfrow=c(1,2))
+p1 <- acf(res.fit)
+p2 <- Pacf(res.fit)
+```
+
+Here is the first differenced residuals of the fitted linear regression with a seasonal difference of a frequency of 4. The lag plots for both ACF and PACF have improved a lot as almost lags are inside of the confidence bands. From the ACF plot, we can decide that $q=1,3$ and $Q=1$, and from the PACF plot, we can decide that $p=1,3$, and $P=1$, and since the data has only been differenced once, $d=0,1$. Next, we can fit the model mannually with these parameters, and then find a best model.
+
+```{r, echo=FALSE}
+res.fit %>% diff() %>% diff(4) %>% ggtsdisplay()
+#res.fit <- res.fit %>% diff() %>% diff(4)
+```
+
+```{r,echo=FALSE}
+#q=1,3 Q=1 , p=1,3, P=1,3
+#write a function
+SARIMA.c=function(p1,p2,q1,q2,P1,P2,Q1,Q2,d1,d2,data){
+  
+  temp=c()
+  d=1
+  D=1
+  s=4
+  
+  i=1
+  temp= data.frame()
+  ls=matrix(rep(NA,9*52),nrow=52)
+  
+  
+  for (p in p1:p2)
+  {
+    for(q in q1:q2)
+    {
+      for(P in P1:P2)
+      {
+        for(Q in Q1:Q2)
+        {
+          for(d in d1:d2)
+       
+        {
+          if(p+d+q+P+D+Q<=8)
+          {
+            
+            model<- Arima(data,order=c(p-1,d,q-1),seasonal=c(P-1,D,Q-1))
+            ls[i,]= c(p-1,d,q-1,P-1,D,Q-1,model$aic,model$bic,model$aicc)
+            i=i+1
+            #print(i)
+            
+          }
+          
+        }
+      }
+    }
+    
+  }
+  
+  }
+  temp= as.data.frame(ls)
+  names(temp)= c("p","d","q","P","D","Q","AIC","BIC","AICc")
+  
+  temp
+  
+}
+
+##q=1,3 Q=1 , p=1,3, P=1,3 d=0,1 
+
+output=SARIMA.c(p1=1,p2=4,q1=1,q2=4,P1=1,P2=4,Q1=1,Q2=2,d1=0,d2=1,data=res.fit)
+#output
+```
+
+Below is an output table with the minimum AIC, AICc, and BIC with corresponding $p,d,q,P,D,Q$. Two optimal models are generated by manually fitting model. Minimum AIC and AICc give an $ARIMA(1,1,0)(0,1,1)[4]$ model, and minimum BIC gives an $ARIMA(0,1,0)(0,1,1)[4]$ model. Next, let's do model diagnostics to check the residuals from the models.
+
+```{r, echo=FALSE}
+aic <- output[which.min(output$AIC),]
+aicc <- output[which.min(output$AICc),]
+bic <- output[which.min(output$BIC),]
+
+mintable <- rbind(aic, aicc, bic)
+row.names(mintable) <- c("Minimum AIC", "Minimum AICc", "Minimum BIC")
+knitr::kable(mintable)
+```
+
+Let's look at the model diagnostics of the $ARIMA(1,1,0)(0,1,1)[4]$ model that is manually fitted. The standardized residuals plot show no clear trend but some seasonality, and the most of the time the mean is centered around 0. Most of the lags from the ACF of residuals plot are inside of the confidence interval bands, and the normal Q-Q plot of standardized residuals showing a relative straight line except for the two tails. The p-values for Ljung-Box statistic plot showing most of the p-values are at or above the 0.05 significance level, which is a good indicator of an adequate model.
+
+```{r, echo=FALSE}
+set.seed(1234)
+
+model_output1 <- capture.output(sarima(res.fit, 1,1,0, 0,1,1,4)) 
+```
+
+Next let's look at the model diagnostics of the $ARIMA(0,1,0)(0,1,1)[4]$ model that is manually fitted. The standardized residuals plot show no clear trend but some seasonality, and the most of the time the mean is centered around 0. Most of the lags from the ACF of residuals plot are inside of the confidence interval bands, and the normal Q-Q plot of standardized residuals showing a relative straight line except for the two tails. The p-values for Ljung-Box statistic plot showing most of the p-values are at or above the 0.05 significance level, which is a good indicator of an adequate model.
+
+```{r, echo=FALSE}
+set.seed(1234)
+
+model_output2 <- capture.output(sarima(res.fit, 0,1,0, 0,1,1,4)) 
+```
+
+Finally, let's compare the model diagnostics of the `auto.arima()` method $ARIMA(1,0,0)(0,0,1)[4]$ model to those of the manually fitted model. The overall result for the automatically fitted model is pretty similar as the above two models. To choose the best model from these three models, it is the best to use the cross validation method to find a model with lowest RMSE value.
+
+```{r, echo=FALSE}
+set.seed(1234)
+
+model_output3 <- capture.output(sarima(res.fit, 1,0,0, 0,0,1,4)) 
+```
+
+## Cross Validation to Find the Best Model
+
+Here we are using the cross validation method to plot the RMSE values for each of the three model and then find the best model based on their RMSE. In the plot below, we see that fit 3 ($ARIMA(0,1,0)(0,1,1)[4]$) is the best model since it has lower RMSE values than fit 2 ($ARIMA(1,1,0)(0,1,1)[4]$), and it has a more stable RMSE values than fit 1 ($ARIMA(1,0,0)(0,0,1)[4]$) across all the horizon. Therefore, I will choose fit 3, which is the $ARIMA(0,1,0)(0,1,1)[4]$ as the optimal model to use in forecast.
+
+```{r, warning=FALSE, echo=FALSE}
+n=length(res.fit)
+k=9
+
+# n=79
+# n-k=70; 70/4=17.5;
+ 
+rmse1 <- matrix(NA,17.5,4)
+rmse2 <- matrix(NA,17.5,4)
+rmse3 <- matrix(NA,17.5,4)
+
+st <- tsp(res.fit)[1]+(k-1)/4 
+
+for(i in 1:17.5)
+{
+  #xtrain <- window(a10, start=st+(i-k+1)/12, end=st+i/12)
+  xtrain <- window(res.fit, end=st + i-1)
+  xtest <- window(res.fit, start=st + (i-1) + 1/4, end=st + i)
+  
+  #ARIMA(1,0,0)(0,0,1)[4] from auto.arima()
+  fit <- Arima(xtrain, order=c(1,0,0), seasonal=list(order=c(0,0,1), period=4),
+                include.drift=TRUE, method="ML")
+  fcast <- forecast(fit, h=4)
+  
+  
+  # ARIMA(1,1,0)(0,1,1)[4] with min AIC & AICc
+  fit2 <- Arima(xtrain, order=c(1,1,0), seasonal=list(order=c(0,1,1), period=4),
+                include.drift=TRUE, method="ML")
+  fcast2 <- forecast(fit2, h=4)
+  
+  # ARIMA(0,1,0)(0,1,1)[4] with min BIC
+  fit3 <- Arima(xtrain, order=c(0,1,0), seasonal=list(order=c(0,1,1), period=4),
+                include.drift=TRUE, method="ML")
+  fcast3 <- forecast(fit3, h=4)
+
+  rmse1[i,1:length(xtest)]  <- sqrt((fcast$mean-xtest)^2)
+  rmse2[i,1:length(xtest)] <- sqrt((fcast2$mean-xtest)^2)
+  rmse3[i,1:length(xtest)] <- sqrt((fcast3$mean-xtest)^2)
+  
+}
+
+plot(1:4, colMeans(rmse1,na.rm=TRUE), type="l", col=2, xlab="horizon", ylab="RMSE", ylim=c(19,40), lwd=2)
+lines(1:4, colMeans(rmse2,na.rm=TRUE), type="l",col=3, lwd=2)
+lines(1:4, colMeans(rmse3,na.rm=TRUE), type="l",col=4, lwd=2)
+legend("topleft",legend=c("fit1","fit2","fit3"),col=2:4,lty=1)
+```
+
+Here is the RMSE values for fit 1, $ARIMA(1,0,0)(0,0,1)[4]$ model.
+
+```{r, echo=FALSE}
+colMeans(rmse1,na.rm=TRUE)
+```
+
+Here is the RMSE values for fit 2, $ARIMA(1,1,0)(0,1,1)[4]$ model.
+
+```{r, echo=FALSE}
+colMeans(rmse2,na.rm=TRUE)
+```
+
+Here is the RMSE values for fit 3, $ARIMA(0,1,0)(0,1,1)[4]$ model.
+
+```{r, echo=FALSE}
+colMeans(rmse3,na.rm=TRUE)
+```
+
+## Fit the Optimal Model
+
+Here we are fitting an $ARIMA(0,1,0)(0,1,1)[4]$ model as the best model for forecasting. From the equation for the fitted model below, we see that all variables, GDP, CPI, Unemployment rate, and Interest rate have a concurrent influence on the stock price for UNH, meaning as these variables increase, the stock price for UNH will increase at the same time. While the variable inflation has a reverse effect on the stock price for UNH, meaning as inflation increases, the UNH stock price will decrease at the same time. All of these make sense, while in my understanding, the unemployment rate and interest rate variable should have reverse effects to the stock market in general, but for the UNH stock price, these two variables could be exceptions that did not have a negative impact in the end.
+
+```{r, echo=FALSE}
+xreg <- cbind(GDP = data[,"GDP"],
+              CPI = data[,"CPI"],
+              UNRATE = data[,"UNRATE"],
+              Int_rate = data[,"Int_rate"],
+              Inflation = data[,"Inflation"])
+
+fit <- Arima(data$UNH, order=c(0,1,0), seasonal = c(0,1,1), xreg=xreg)
+summary(fit)
+```
+
+**Equation for the fitted model**:
+
+$$x_t = w_t - 0.7543w_{t-1} + 0.0312*GDP + 2.0946*CPI + 7.2339*Unemp_rate + 9.7836*Interest_rate - 3.437*Inflation$$
+
+## Forecasting
+
+Finally, we are going to use the fitted optimal model above to forecast the UNH stock price for the next three years. We see that based on the five predictors, the stock price for UNH is going to continually increase a lot.
+
+```{r, echo=FALSE}
+gdp.fit <- auto.arima(data$GDP)
+fgdp <- forecast(gdp.fit)
+
+cpi.fit <- auto.arima(data$CPI)
+#summary(cpi.fit)
+fcpi <- forecast(cpi.fit)
+
+unrate.fit <- auto.arima(data$UNRATE)
+#summary(unrate.fit)
+funrate <- forecast(unrate.fit)
+
+int.rate.fit <- auto.arima(data$Int_rate)
+fint <- forecast(int.rate.fit)
+
+inflation.fit <- auto.arima(data$Inflation)
+finflation <- forecast(inflation.fit)
+
+fxreg <- cbind(GDP = fgdp$mean,
+              CPI =fcpi$mean,
+              UNRATE = funrate$mean,
+              Int_rate = fint$mean, # fimp$mean gives the forecasted values
+              Inflation = finflation$mean)
+
+fcast <- forecast(fit, xreg=fxreg)
+
+autoplot(fcast) + xlab("Year") +
+  ylab("UNH Stock Prices ($)")
+```
+
+# Works Cited
+
+Miranda Marquit, Aug. 5, 2019, 5 Economic Factors That Influence Stocks, U.S. News, https://money.usnews.com/money/blogs/the-smarter-mutual-fund-investor/slideshows/economic-factors-that-influence-stocks?onepage;
+
+AARON LEVITT, Jan. 23, 2022, Macroeconomic Indicators That Affect the US Stock Market, Investopedia, https://www.investopedia.com/articles/investing/031413/economic-indicatiors-affect-us-stock-market.aspl;

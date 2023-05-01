@@ -1,0 +1,705 @@
+---
+title: "ARMA/ARIMA/SARIMA Models"
+---
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(forecast)
+library(astsa) 
+library(xts)
+library(tseries)
+library(fpp2)
+library(fma)
+library(lubridate)
+library(tidyverse)
+library(TSstudio)
+library(quantmod)
+library(tidyquant)
+library(plotly)
+library(ggplot2)
+```
+
+```{r,echo=FALSE}
+amzn <- read.csv("./data/yahoo/tech/AMZN.csv")
+goog <- read.csv("./data/yahoo/tech/GOOG.csv")
+msft <- read.csv("./data/yahoo/tech/MSFT.csv")
+aapl <- read.csv("./data/yahoo/tech/AAPL.csv")
+tsla <- read.csv("./data/yahoo/tech/TSLA.csv")
+meta <- read.csv("./data/yahoo/tech/META.csv")
+
+colnames(amzn)[6] = "AMZN"
+colnames(goog)[6] = "GOOG"
+colnames(msft)[6] = "MSFT"
+colnames(aapl)[6] = "AAPL"
+colnames(meta)[6] = "META"
+colnames(tsla)[6] = "TSLA"
+
+amzn$Date <- as.Date(amzn$Date, "%Y-%m-%d")
+meta$Date <- as.Date(meta$Date, "%Y-%m-%d")
+tsla$Date <- as.Date(tsla$Date, "%Y-%m-%d")
+goog$Date <- as.Date(goog$Date, "%Y-%m-%d")
+aapl$Date <- as.Date(aapl$Date, "%Y-%m-%d")
+msft$Date <- as.Date(msft$Date, "%Y-%m-%d")
+
+df <- amzn %>% inner_join(meta, by = c('Date'))
+df <- df[-c(2:5,7:11, 13)]
+df <- df %>% inner_join(tsla, by=c('Date'))
+df <- df[-c(4:7,9)]
+df <- df %>% inner_join(msft, by=c("Date"))
+df <- df[-c(5:8,10)]
+df <- df %>% inner_join(aapl, by=c('Date'))
+df <- df[-c(6:9,11)]
+df <- df %>% inner_join(goog, by=c('Date'))
+stock <- df[-c(7:10,12)]
+
+#head(stock)
+```
+
+# ARIMA Model
+## Tech Sector
+### Explore Data
+
+The first ARIMA model we will use the data set of Meta (META) stock prices from June 2012 to January 2023 to predict its future stock prices. The original data and by taking log of the original data are plotted below to better visualize the data. There is a clear increasing trend for Meta stock prices during this time period, and after 2020, there was a peak that led the stock prices increasing significantly and then decreasing significantly again. By taking log of the original data, it does not seem to help to remove the overall increasing trend, but the overall trend has been smoothed by some points.
+
+The ACF plot and Augmented Dickey-Fuller Test were shown in the previous EDA tab, but are also included here for the purpose of checking the stationarity of the original data.
+
+Sometimes, by taking the log transformation is useful to remove the heteroskedasticity of the original data, while sometimes it will make the data worse. To explore the effect of taking log transformation, both the original time series and the log time series are plotted below, and we see that there are not obvious heteroskedasticity from the original plot and by taking the log, it may not have a positive impact to the data, even though the variance is reduced a little bit.
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+require(gridExtra)
+
+p1 <- ggplot(stock, aes(x=Date)) +
+  geom_line(aes(y=META), color="blue")+
+   labs(
+    title = "Stock Prices for META from 2012 to 2022",
+    x = "Date",
+    y = "Adjusted Closing Prices")
+
+p2 <- ggplot(stock, aes(x=Date)) +
+  geom_line(aes(y=log(META)), color="red")+
+   labs(
+    title = "Log: Stock Prices for META from 2012 to 2022",
+    x = "Date",
+    y = "Adjusted Closing Prices")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+From both of the original ACF plot and the log transformation ACF plot, we see that our data is not stationary, since most of the lags are out of the 95% confidence interval and the data shows a highly correlated pattern. Therefore, we need to do something more in order to make the data stationary to further build useful model in forecasting.
+
+```{r,message=FALSE,warning=FALSE, echo=FALSE}
+# Get mean value for each month
+mean_data <- stock %>% 
+  mutate(month = month(Date), year = year(Date)) %>% 
+  group_by(year, month) %>% 
+  summarize(mean_value = mean(META))
+
+# create monthly time series data
+meta_month<-ts(mean_data$mean_value,start=decimal_date(as.Date("2012-06-01",format = "%Y-%m-%d")),frequency = 12)
+```
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+require(gridExtra)
+
+#meta<-ts(stock$META,start=decimal_date(as.Date("2012-06-01",format = "%Y-%m-%d")),frequency = 365.25)
+
+p1 <- ggAcf(meta_month,100, main="Original Data ACF: META")
+p2 <- ggAcf(log(meta_month), 100, main="Log of Data ACF: META")
+
+grid.arrange(p1,p2, nrow=1)
+```
+
+Below are the ADF test results for both of the original data and log transformed data, and the results are aligned with the above ACF plot results. The null hypothesis for the ADF test is that the time series is stationary, while the alternative hypothesis is that the time series is not stationary. Since both p-values are much greater than 0.05, we then are failed to reject the null and conclude that the the time series is not stationary.
+
+```{r, echo=FALSE}
+tseries::adf.test(meta_month)
+tseries::adf.test(log(meta_month))
+```
+
+### Difference Data
+
+In order to make our non-stationary time series to stationary, we need to further take actions to differentiate the data. Here, we take a first order of differentiation, the original plot seems to be pretty much like stationary. By taking the first order of differentiation, the ACF and PACF plots below have also already shown the stationary property, which most lags lie within the 95% confidence interval and not clear seasonal components from each lag. Therefore, there is no need to take the first order of differentiation to the log of the time series or the second order of differentiation.
+
+```{r, echo=FALSE}
+meta_month %>% diff() %>% ggtsdisplay()
+```
+
+From the Augmented Dickey-Fuller Test result below, we also see that the p-value is now 0.01, which is smaller than the 0.05 threshold. Therefore, the ADF test result is aligned with the above ACF and PACF plots, and we can say that our time series for META stock prices is now stationary. Next, we are ready for building forecasting models.
+
+```{r,warning=FALSE, echo=FALSE}
+df.meta <- meta_month %>% diff()
+tseries::adf.test(df.meta)
+```
+
+### Set Up Model
+
+To set up our ARIMA(p,d,q) model, we first need to determine the p, which is from the AR model, q, which is from the MA model, and d, which is the number of differencing. By looking at the ACF (MA model) plot below, we can determine the highly significant spikes of q to be 1, 3, and 4. By looking at the PACF (AR model) plot below, we can determine the highly significant spikes of p to be 1, 3, and 4 as well. For d, since our time series has only been differenced for the first order, d should be equal to 1.
+
+```{r,warning=FALSE, echo=FALSE}
+p1 <- ggAcf(df.meta, 100)+
+  ggtitle("1st Order Differentiated ACF: META")
+p2 <- ggPacf(df.meta, 100)+
+  ggtitle("1st Order Differentiated PACF: META")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+Below is a table showing all the possible p, d, and q for the ARIMA model, and each combination has its respective Akaike Information Criterion(AIC), its small-sample equivalent, AICc, and Bayesian Information Criterion (BIC) score. AIC penalizes models that use more parameters, so if two models explain the same amount of variation, the one with fewer parameters will have a lower AIC score and will be the better-fit model; lower BIC value indicates lower penalty terms hence a better model. Therefore, since the lower these three scores the better, we want to find out a model that contains the minimum of these three values to be the best model in the next step.
+
+```{r, echo=FALSE}
+d=1
+
+i=1
+temp= data.frame()
+ls=matrix(rep(NA,6*8),nrow=8)
+
+for (p in c(2,4,5))  # p=1,3,4
+{
+  for(q in c(2,4,5)) # q=1,3,4
+  {
+      if(p-1+d+q-1<=8)
+      {
+        model<- Arima(df.meta,order=c(p-1,d,q-1),include.drift=TRUE) #including drift because of the obvious trend
+        ls[i,]= c(p-1,d,q-1,model$aic,model$bic,model$aicc)
+        i=i+1
+      }
+      
+    }
+  }
+
+temp= as.data.frame(ls)
+names(temp)= c("p","d","q","AIC","BIC","AICc")
+
+#temp
+knitr::kable(temp)
+```
+
+Here, the minimum of AIC, AICc, and BIC combinations are shown in the table below, which are extracted from the previous full table. AIC and AICc errors are minimized for the model where p=3, d=1, and q=3, and BIC errors are minimized for the model where p=1, d=1, and q=1. The model ARIMA(3,1,3) will be chosen since it minimizes two of these three values.
+
+```{r, echo=FALSE}
+aic <- temp[which.min(temp$AIC),] # 3,1,3
+aicc <- temp[which.min(temp$AICc),] # 3,1,3
+bic <- temp[which.min(temp$BIC),] # 1,1,1
+
+mintable <- rbind(aic, aicc, bic)
+row.names(mintable) <- c("Minimum AIC", "Minimum AICc", "Minimum BIC")
+knitr::kable(mintable)
+```
+
+Here is the summary of ARIMA(3,1,3) model, which is helpful to write the equation of the model.
+
+```{r, echo=FALSE}
+fit <- Arima(df.meta, order=c(3,1,3), include.drift = TRUE)
+summary(fit)
+```
+
+From the ARIMA(3,1,3) model summary coefficients above, the model equation can be written as:
+
+$$x_t = 0.343x_{t-1} - 0.995x_{t-2} + 0.162x_{t-3} + w_t - 1.309w_{t-1} + 1.309w_{t-2}- w_{t-3} - 0.0437$$
+
+### Model Diagnostic
+
+Below are the plots for the ARIMA(3,1,3) model diagnostic, which can be useful for us to understand the residuals. The standardized residuals plot on the top shows no clear trend or clear seasonality, except that during 2022, there was a large drop in the stock price of META, causing some variations in the standardized residual plot, and the reasons for that plummets were mentioned in the previous section, which are huge competition with TikTok, a broad slowdown in online advertisement spending and challenges from Apple's iOS privacy update. The ACF of residuals and normal Q-Q plot of standardized residuals look pretty good as almost all the lags are within the confidence interval bands in the ACF plot, and it is almost looks like a straight line shown in the Q-Q plot, although there are several outliers on the two tails. Lastly, the p-values for Ljung-Box statistic plot also looks very optimistic. Almost all the p-values are above the 0.05 significant level, which is a desired result, since all values are non-significant and they are serially uncorrelated, which means our model is a good fit.
+
+```{r, echo=FALSE}
+model_output <- capture.output(sarima(df.meta, 3,1,3))
+```
+
+### Compare with `auto.arima()`
+
+Below is the model results suggested by `auto.arima()` function. Here, the p = 0, d = 1, and q = 0, and this is clearly very different from what we have done above for manually choosing the values in the fitted ARIMA model. The AIC from this model is 1078, AICc is 1078.03, which are all greater than the ARIMA(3,1,3) model, which the BIC of 1080.84 is less than our best model. The training set errors, such as ME, RMSE, and MAE are greater than our fitted model.
+
+```{r,echo=FALSE}
+auto <- auto.arima(meta_month)
+summary(auto)
+```
+
+From the model diagnostic of the `auto.arima()` model, we see that the p-values for Ljung-Box statistic plot in the bottom does not look good as most of the values are significant meaning a less desirable result, therefore, our ARIMA(3,1,3) is better. The reasons that `auto.arima()` function produces a totally different result are that this method is not as reliable as we plotting the ACF and PACF plots and choosing the values manually, because it could ignore the possible log transformation or differentiation at the first place, and then picking different p or q values that do not seem to be the highly significant spikes. Therefore, the high variations between the two methods of generating models are understandable.
+
+```{r, echo=FALSE}
+model_output1 <- capture.output(sarima(meta_month, 0,1,0))
+```
+
+### Forecast
+
+Below are two plots showing the META stock prices forecasts of the 1st order of differenciation and the META stock prices forecasts of the log transformation respectively. The log transformation forecasts plot is included here as a comparison with the 1st order of differentiation forecasts. Both forecasts imply a pretty slightly increasing trend with a confidence band, and the first plot also shows the seasonality of META stock prices of each year. The forecast of course could not predict the future external factors that could potentially affect the stock prices significantly, such as economic downturn or company financial crisis. Therefore, our ARIMA(3,1,3) model has done a descent job on forecasting overall.
+
+```{r, echo=FALSE, message=FALSE}
+p1 <- df.meta %>%
+  Arima(order=c(3,1,3),include.drift = TRUE) %>%
+  forecast %>%
+  autoplot(main="META Stock Prices Forecasts:ARIMA(3,1,3) with drift:1st Order Differencing") +
+  ylab("Stock price") + xlab("Year")
+
+p2 <- log(meta_month) %>%
+  Arima(order=c(3,1,3),include.drift = TRUE) %>%
+  forecast %>%
+  autoplot(main="META Stock Prices Forecasts:ARIMA(3,1,3) with drift:Log Transformation") +
+  ylab("Stock price") + xlab("Year")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+### Compare with Benchmark Methods
+
+There are three benchmark methods in total, and below is the first method to check the residuals from the mean of the first order of differentiation of the META stock prices. From small p-value (\<0.05) of the Ljung-Box test, we know that the model did not fully capture the noise or randomness of the data. From the three residual plots below, we see that the residual from mean benchmark method has done a fairly well job, since most of the lags are within the significance bands, and residuals are almost normally distributed like a bell-curve, and no obvious trends of data over time.
+
+```{r, echo=FALSE}
+f1 <- meanf(df.meta, h=20)
+p1 <- checkresiduals(f1)
+#accuracy(f1)
+```
+
+The other two benchmark methods are called naive and random walk, and below are plots generated from these two methods to check the residuals of the first order of differentiation of the META stock prices. From the very small p-value (1.908-05 and 1.11e-05) of the Ljung-Box tests, we know that the model did not fully capture the noise or randomness of the data. From the three residual plots below, we see that these two methods have pretty much the same residual plots, and both have done a fairly well job, since most of the lags are within the significance bands, except for the first lag that seems to be out of the band too much, and residuals are almost normally distributed like a bell-curve, and no obvious trends of data over time.
+
+```{r, echo=FALSE}
+f2 <- naive(df.meta, h=20)
+checkresiduals(f2)
+
+f3 <- rwf(df.meta, drift=TRUE, h=20)
+checkresiduals(f3)
+```
+
+Now, let's look at and compare the accuracy statistics about the performance of each of the four models, including our fitted best model, and the three benchmark methods models. The table below is a summary of RMSE, MAE and MASE for each model. The fitted ARMIA(3,1,3) has the all the lowest RMSE, MAE, and MASE scores among the four models. The mean method has very close MAE and MASE scores to our fitted model. The naive and random walk methods yield pretty close results, which are aligned with the residual plots mentioned above, but both methods have a little bit higher error scores compared to our fitted model and the mean method. Overall, our fitted ARIMA(3,1,3) outperforms all the benchmark methods and is the best model until now.
+
+```{r, echo=FALSE}
+d1 <- as.data.frame(accuracy(f1))
+d2 <- as.data.frame(accuracy(f2))
+d3 <- as.data.frame(accuracy(f3))
+
+pred <- forecast(fit, 20)
+d4 <- as.data.frame(accuracy(pred))
+
+table1 <- rbind(d4, d1,d2,d3)
+row.names(table1) <- c("Fit","Mean", "Naive", "Random Walk")
+# drop some columns for final table
+table2 <- subset(table1, select=-c(ME,MPE, MAPE, ACF1))
+write.csv(table2, "arima_rmse.csv")
+knitr::kable(table2)
+```
+
+## Real Estate Sector
+### Explore Data
+```{r, echo=FALSE}
+exr <- read.csv("./data/yahoo/realestate/EXR.csv")
+exr$Date <- as.Date(exr$Date,"%Y-%m-%d")
+exr <- subset(exr, select=-c(Open, High, Low, Close, Volume))
+#head(exr)
+#tail(exr)
+```
+
+The second ARIMA model we will use the data set of Extra Space Storage Inc. (EXR) stock prices from September 2004 to April 2023 to predict its future stock prices. The original data and by taking log of the original data are plotted below to better visualize the data. There is a clear increasing trend for Extra Space Storage stock prices during this time period, and after 2020, there was a peak that led the stock prices increasing significantly and then decreasing a little by little. By taking log of the original data, it does not seem to help to remove the overall increasing trend, but the overall trend has been smoothed by some points.
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+require(gridExtra)
+
+p1 <- ggplot(exr, aes(x=Date)) +
+  geom_line(aes(y=Adj.Close), color="blue")+
+   labs(
+    title = "EXR Stock Prices from 2004 to 2023",
+    x = "Date",
+    y = "Adjusted Closing Prices")
+
+p2 <- ggplot(exr, aes(x=Date)) +
+  geom_line(aes(y=log(Adj.Close)), color="red")+
+   labs(
+    title = "Log: EXR Stock Prices from 2004 to 2023",
+    x = "Date",
+    y = "Adjusted Closing Prices")
+
+grid.arrange(p1,p2, nrow=2)
+```
+From both of the original ACF plot and the log transformation ACF plot, we see that our data is not stationary, since most of the lags are out of the 95% confidence interval and the data shows a highly correlated pattern. Therefore, we need to do something more in order to make the data stationary to further build useful model in forecasting.
+
+```{r,message=FALSE,warning=FALSE, echo=FALSE}
+# Get mean value for each month
+mean_data <- exr %>% 
+  mutate(month = month(Date), year = year(Date)) %>% 
+  group_by(year, month) %>% 
+  summarize(mean_value = mean(Adj.Close))
+
+# create monthly time series data
+exr_month<-ts(mean_data$mean_value,start=decimal_date(as.Date("2004-09-01",format = "%Y-%m-%d")),frequency = 12)
+```
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+require(gridExtra)
+
+p1 <- ggAcf(exr_month,100, main="Original Data ACF: EXR")
+p2 <- ggAcf(log(exr_month), 100, main="Log of Data ACF: EXR")
+
+grid.arrange(p1,p2, nrow=1)
+```
+
+Below are the ADF test results for both of the original data and log transformed data, and the results are aligned with the above ACF plot results. The null hypothesis for the ADF test is that the time series is stationary, while the alternative hypothesis is that the time series is not stationary. Since both p-values are much greater than 0.05, we then are failed to reject the null and conclude that the the time series is not stationary.
+
+```{r, echo=FALSE}
+tseries::adf.test(exr_month)
+tseries::adf.test(log(exr_month))
+```
+### Difference Data
+
+In order to make our non-stationary time series to stationary, we need to further take actions to differentiate the data. Here, we take a first order of differentiation, the original plot seems to be pretty much like stationary, except for the huge fluctuations after 2020. By taking the first order of differentiation, the ACF and PACF plots below have also already shown the stationary property, which most lags lie within the 95% confidence interval and not clear seasonal components from each lag. Therefore, there is no need to take the first order of differentiation to the log of the time series or the second order of differentiation.
+
+```{r, echo=FALSE}
+exr_month %>% diff() %>% ggtsdisplay()
+```
+
+From the Augmented Dickey-Fuller Test result below, we also see that the p-value is now 0.01, which is smaller than the 0.05 threshold. Therefore, the ADF test result is aligned with the above ACF and PACF plots, and we can say that our time series for EXR stock prices is now stationary. Next, we are ready for building forecasting models.
+
+```{r,warning=FALSE, echo=FALSE}
+df.exr <- exr_month %>% diff()
+tseries::adf.test(df.exr)
+```
+### Set Up Model
+
+To set up our ARIMA(p,d,q) model, same process as the above first ARIMA model with the META data. We first need to determine the p, which is from the AR model, q, which is from the MA model, and d, which is the number of differencing. By looking at the ACF (MA model) plot below, we can determine the highly significant spikes of q to be 1, 2, and 4. By looking at the PACF (AR model) plot below, we can determine the highly significant spikes of p to be 1, 3, and 4 as well. For d, since our time series has only been differenced for the first order, d should be equal to 1.
+
+```{r,warning=FALSE, echo=FALSE}
+p1 <- ggAcf(df.exr, 100)+
+  ggtitle("1st Order Differentiated ACF: EXR")
+p2 <- ggPacf(df.exr, 100)+
+  ggtitle("1st Order Differentiated PACF: EXR")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+Below is a table showing all the possible p, d, and q for the ARIMA model, and each combination has its respective Akaike Information Criterion(AIC), its small-sample equivalent, AICc, and Bayesian Information Criterion (BIC) score. AIC penalizes models that use more parameters, so if two models explain the same amount of variation, the one with fewer parameters will have a lower AIC score and will be the better-fit model; lower BIC value indicates lower penalty terms hence a better model. Therefore, since the lower these three scores the better, we want to find out a model that contains the minimum of these three values to be the best model in the next step.
+
+```{r, echo=FALSE}
+d=1
+
+i=1
+temp= data.frame()
+ls=matrix(rep(NA,6*8),nrow=8)
+
+for (p in c(2,3,5))  # p=1,2,4
+{
+  for(q in c(2,4,5)) # q=1,3,4
+  {
+      if(p-1+d+q-1<=8)
+      {
+        model<- Arima(df.exr, order=c(p-1,d,q-1),include.drift=TRUE) #including drift because of the obvious trend
+        ls[i,]= c(p-1,d,q-1,model$aic,model$bic,model$aicc)
+        i=i+1
+      }
+      
+    }
+  }
+
+temp= as.data.frame(ls)
+names(temp)= c("p","d","q","AIC","BIC","AICc")
+
+#temp
+knitr::kable(temp)
+```
+
+Here, the minimum of AIC, AICc, and BIC combinations are shown in the table below, which are extracted from the previous full table. AIC and AICc errors are minimized for the model where p=2, d=1, and q=4, and BIC errors are minimized for the model where p=1, d=1, and q=1. The model ARIMA(2,1,4) will be chosen since it minimizes two of these three values.
+
+```{r, echo=FALSE}
+aic <- temp[which.min(temp$AIC),] # 2,1,4
+aicc <- temp[which.min(temp$AICc),] # 2,1,4
+bic <- temp[which.min(temp$BIC),] # 1,1,1
+
+mintable <- rbind(aic, aicc, bic)
+row.names(mintable) <- c("Minimum AIC", "Minimum AICc", "Minimum BIC")
+knitr::kable(mintable)
+```
+
+Here is the summary of ARIMA(2,1,4) model, which is helpful to write the equation of the model.
+
+```{r, echo=FALSE}
+fit <- Arima(df.exr, order=c(2,1,4), include.drift = TRUE)
+summary(fit)
+```
+From the ARIMA(2,1,4) model summary coefficients above, the model equation can be written as:
+
+$$x_t = -0.5952x_{t-1} - 0.9011x_{t-2} + w_t - 0.5502w_{t-1} + 0.3708w_{t-2}- 1.0752w_{t-3} + 0.2547w_{t-4} + 0.0075$$
+### Model Diagnostic
+
+Below are the plots for the ARIMA(2,1,4) model diagnostic, which can be useful for us to understand the residuals. The standardized residuals plot on the top shows no clear trend or clear seasonality, except that after 2020, there was a large increase and then drop in the stock price of Extra Space Storage, causing some variations in the standardized residual plot. The ACF of residuals and normal Q-Q plot of standardized residuals look pretty good as almost all the lags are within the confidence interval bands in the ACF plot, and it is almost looks like a straight line shown in the Q-Q plot, although there are several outliers on the two tails. Last but not the lease, the p-values for Ljung-Box statistic plot does not looks very optimistic though. Almost all the p-values are below the 0.05 significant level, which is not a desired result, since all values are significant and they are potentially serially correlated.  
+
+```{r, echo=FALSE}
+model_output <- capture.output(sarima(df.exr, 2,1,4))
+```
+
+
+### Compare with `auto.arima()`
+
+Below is the model results suggested by `auto.arima()` function. Here, the p = 0, d = 1, and q = 1, and this is clearly very different from what we have done above for manually choosing the values in the fitted ARIMA model. The AIC from this model is 1411.94, AICc is 1412.05, which are all greater than the ARIMA(2,1,4) model, where the BIC of 1422.16 is less than our best model. The training set errors, such as ME, RMSE, and MAE are greater than our fitted model.
+
+```{r,echo=FALSE}
+auto <- auto.arima(exr_month)
+summary(auto)
+```
+
+From the model diagnostic of the `auto.arima()` model, we see that the p-values for Ljung-Box statistic plot in the bottom does not look good as most of the values are significant meaning a less desirable result, therefore, our ARIMA(2,1,4) is better. The reasons that `auto.arima()` function produces a totally different result are that this method is not as reliable as we plotting the ACF and PACF plots and choosing the values manually, because it could ignore the possible log transformation or differentiation at the first place, and then picking different p or q values that do not seem to be the highly significant spikes. Therefore, the high variations between the two methods of generating models are understandable.
+
+```{r, echo=FALSE}
+model_output1 <- capture.output(sarima(exr_month, 0,1,0))
+```
+
+### Forecast
+
+Below are two plots showing the EXR stock prices forecasts of the 1st order of differentiation and the EXR stock prices forecasts of the log transformation respectively. The log transformation forecasts plot is included here as a comparison with the 1st order of differentiation forecasts. Both forecasts imply a pretty slightly increasing trend with a confidence band, and the first plot also shows the seasonality of EXR stock prices of each year. The forecast of course could not predict the future external factors that could potentially affect the stock prices significantly, such as economic downturn or company financial crisis. Therefore, our ARIMA(2,1,4) model has done a descent job on forecasting overall.
+
+```{r, echo=FALSE, message=FALSE}
+p1 <- df.exr %>%
+  Arima(order=c(2,1,4),include.drift = TRUE) %>%
+  forecast %>%
+  autoplot(main="EXR Stock Prices Forecasts:ARIMA(2,1,4) with drift:1st Order Differencing") +
+  ylab("Stock price") + xlab("Year")
+
+p2 <- log(exr_month) %>%
+  Arima(order=c(2,1,4),include.drift = TRUE) %>%
+  forecast %>%
+  autoplot(main="EXR Stock Prices Forecasts:ARIMA(2,1,4) with drift:Log Transformation") +
+  ylab("Stock price") + xlab("Year")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+### Compare with Benchmark Methods
+
+There are three benchmark methods in total, and below is the first method to check the residuals from the mean of the first order of differentiation of the EXR stock prices. From small p-value (<0.05) of the Ljung-Box test, we know that the model did not fully capture the noise or randomness of the data. From the three residual plots below, we see that the residual from mean benchmark method has done a fairly well job, since most of the lags are within the significance bands, and residuals are almost normally distributed like a bell-curve, and no obvious trends of data over time.
+
+```{r, echo=FALSE}
+f1 <- meanf(df.exr, h=20)
+p1 <- checkresiduals(f1)
+#accuracy(f1)
+```
+
+The other two benchmark methods are called naive and random walk, and below are plots generated from these two methods to check the residuals of the first order of differentiation of the EXR stock prices. From the very small p-value (8.992e-16 and 3.331e-16) of the Ljung-Box tests, we know that the model did not fully capture the noise or randomness of the data. From the three residual plots below, we see that these two methods have pretty much the same residual plots, and both have done a fairly well job, since most of the lags are within the significance bands, except for the first lag that seems to be out of the band too much, and residuals are almost normally distributed like a bell-curve, and no obvious trends of data over time.
+
+```{r, echo=FALSE}
+f2 <- naive(df.exr, h=20)
+checkresiduals(f2)
+
+f3 <- rwf(df.exr, drift=TRUE, h=20)
+checkresiduals(f3)
+```
+
+Now, let's look at and compare the accuracy statistics about the performance of each of the four models, including our fitted best model, and the three benchmark methods models. The table below is a summary of RMSE, MAE and MASE for each model. The fitted ARMIA(2,1,4) has the all the lowest RMSE, MAE, and MASE scores among the four models. The mean method has very close MAE and MASE scores to our fitted model. The naive and random walk methods yield pretty close results, which are aligned with the residual plots mentioned above, but both methods have a little bit higher error scores compared to our fitted model and the mean method. Overall, our fitted ARIMA(2,1,4) outperforms all the benchmark methods and is the best model until now.
+
+```{r, echo=FALSE}
+d1 <- as.data.frame(accuracy(f1))
+d2 <- as.data.frame(accuracy(f2))
+d3 <- as.data.frame(accuracy(f3))
+
+pred <- forecast(fit, 20)
+d4 <- as.data.frame(accuracy(pred))
+
+table1 <- rbind(d4, d1,d2,d3)
+row.names(table1) <- c("Fit","Mean", "Naive", "Random Walk")
+# drop some columns for final table
+table2 <- subset(table1, select=-c(ME,MPE, MAPE, ACF1))
+write.csv(table2, "arima_rmse.csv")
+knitr::kable(table2)
+```
+
+
+# SARIMA Model
+
+For the SARIMA model, the monthly unemployment rate from 1948 to 2022 in the United States data set is chosen for the analysis, which is downloaded from FRED Economic Data. The aim of building this model is to forecast the monthly unemployment rate in the US for the next three years with the currently available data.
+
+## Explore Data
+
+First, let's look at the original time series data for the unemployment rate in the U.S. from 1948 to 2022. From the plot below, there is not a clear trend, but a sharp increasing in the percentage of unemployment rate in the year of 2020, and it is clear that it was due to COVID-19. It also appears clear seasonality as there are some constant fluctuations year by year showing in the plot. Therefore, further decomposition and differentiation is needed for this time series.
+
+```{r, echo=FALSE}
+unrate <- read.csv("./data/fred/UNRATE.csv")
+unrate$DATE <- as.Date(unrate$DATE, "%Y-%m-%d")
+#head(gdp)
+unrate.ts <- ts(unrate$UNRATE, start=c(1948,1), end=c(2022,12), frequency=12)
+plot(unrate.ts, xlab="Date", ylab="Unemployment rate (percentage)", main="Unemployment rate from 1948 to 2022 in US")
+```
+
+Here is the additive method of the decomposition of the data. It is clear that there are seasonal and some random components exist in the data, and a little bit but not prominent increasing trend of the unemployment rate time series.
+
+```{r, echo=FALSE}
+decompose.unrate <- decompose(unrate.ts, "additive")
+autoplot(decompose.unrate)
+```
+
+Below are the plots of ACF and PACF plots for the original time series, which indicate that the original data is not stationary. From the ACF plot, the trend of lags are constantly decreasing little by little, indicating the trend of the original series, while the PACF plot looks normal that most of the lags are inside of the confidence band.
+
+```{r, echo=FALSE}
+p1 <- ggAcf(unrate.ts, 50) + ggtitle("ACF of GDP")
+p2 <- ggPacf(unrate.ts, 50) + ggtitle("PACF of GDP")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+## Difference Data
+
+Now let's try to difference the unemployment rate time series data for the first time, and if first order difference works, there is no need to further difference it for the second time or do the seasonal differences. From the first order differentiation plot below, it is clear that the series is now stationary as all the lags are inside of the confidence band of the ACF and PACF plots, and no clear trend or seasonality of the original data. Therefore, the data does not need to do the seasonal difference any further.
+
+```{r,echo=FALSE}
+# first differencing
+unrate.ts %>% diff() %>% ggtsdisplay()
+df.unrate.ts <- unrate.ts %>% diff()
+```
+
+From the Augmented Dickey-Fuller Test result below, we also see that the p-value is now 0.01, which is smaller than the 0.05 threshold. Therefore, the ADF test result is aligned with the above ACF and PACF plots above, and we can say that our time series for unemployment rate is now stationary. Next, we are ready for building forecasting models.
+
+```{r, warning=FALSE, echo=FALSE}
+tseries::adf.test(df.unrate.ts)
+```
+
+## Set Up Model
+
+To set up our SARIMA(p,d,q)(P,D,Q) model, we first need to determine the p, which is from the AR model, q, which is from the MA model, and d, which is the number of difference. By looking at the ACF (MA model) plot below, we can determine the highly significant spikes of q to be 0, 1, 2, and 4. By looking at the PACF (AR model) plot below, we can determine the highly significant spikes of p to be 0, 1, 2, and 4 as well. For d, since our time series has only been differenced for the first order, d should be equal to 1. For P and Q, the possible values should both to be 1 and 2, and for D, the possible value is still 1.
+
+```{r,echo=FALSE}
+p1 <- ggAcf(df.unrate.ts, 50) + ggtitle("1st Order Differentiated ACF: Unemployment Rate")
+p2 <- ggPacf(df.unrate.ts, 50) + ggtitle("1st Order Differentiated PACF: Unemployment Rate")
+
+grid.arrange(p1,p2, nrow=2)
+```
+
+```{r, echo=FALSE}
+# from seasonal differencing, keep D=1 and d=1
+# ACF high significant spikes at q=0,1,2,4, Q= 1,2
+# PACF high significant spikes at p=0,1,2,4, P= 1,2
+
+#write a funtion
+SARIMA.c=function(p1,p2,q1,q2,P1,P2,Q1,Q2,data){
+  
+  #K=(p2+1)*(q2+1)*(P2+1)*(Q2+1)
+  
+  temp=c()
+  d=1
+  D=1
+  s=12
+  
+  i=1
+  temp= data.frame()
+  ls=matrix(rep(NA,9*35),nrow=35)
+  
+  
+  for (p in p1:p2)
+  {
+    for(q in q1:q2)
+    {
+      for(P in P1:P2)
+      {
+        for(Q in Q1:Q2)
+        {
+          if(p+d+q+P+D+Q<=9)
+          {
+            model<- Arima(data,order=c(p-1,d,q-1),seasonal=c(P-1,D,Q-1))
+            ls[i,]= c(p-1,d,q-1,P-1,D,Q-1,model$aic,model$bic,model$aicc)
+            i=i+1
+          }
+          
+        }
+      }
+    }
+    
+  }
+  
+  temp= as.data.frame(ls)
+  names(temp)= c("p","d","q","P","D","Q","AIC","BIC","AICc")
+  
+  temp
+  
+}
+```
+
+With the information above, the SARIMA model has been set up with respective possible values, and the table below is the result of the minimum AIC, AICc, and BIC combinations from the model. The AIC and AICc give us the same results that p=0, d=1, q=0, P=1, D=1, Q=2; while BIC obtains a different result as p=0, d=1, q=0, P=0, D=1, Q=1. Choosing between these two models to determine the best model is needed for forecasting in the next step.
+
+```{r, echo=FALSE}
+# q=0,1,2,4; Q=1,2 and PACF plot: p=0,1,2,4; P=1,2, D=1 and d=0,1
+output=SARIMA.c(p1=1,p2=5,q1=1,q2=5,P1=1,P2=3,Q1=1,Q2=3, data=unrate.ts)
+#output
+#knitr::kable(output)
+
+aic <- output[which.min(output$AIC),]
+aicc <- output[which.min(output$AICc),]
+bic <- output[which.min(output$BIC),]
+
+mintable <- rbind(aic, aicc, bic)
+row.names(mintable) <- c("Minimum AIC", "Minimum AICc", "Minimum BIC")
+knitr::kable(mintable)
+```
+
+## Model Diagnostic
+
+Below are the results of model diagnostics for the two models mentioned above. The first graph shows the SARIMA(0,1,0,1,1,2,12) and the second graph shows the SARIMA(0,1,0,0,1,1,12). Both standardized residuals graphs on the top show no clear trend or clear seasonality, except that during 2020, which the whole market was impacted by COVID-19, so as the unemployment rate in the United States. Both ACF of residuals and normal Q-Q plot of standardized residuals look pretty good as almost all the lags are within the 95% confidence interval bands from the ACF plots, and the Q-Q plots look almost like a straight line except for several outliers on the two tails. However, the only clear difference between the two models is showing in the p-values for Ljung-Box statistic plots. Even though both plots having p-values that are significantly greater than 0.05, which are the optimal and desirable signs, the first model looks much better than the second model, since its p-values are increasing steadily and slowly at a level, while the second model has the p-values jumping back and forth, which is not an optimal sign. Therefore, SARIMA(0,1,0,1,1,2,12) will be chosen for further forecasting as the optimal model for this data set.
+
+```{r, echo=FALSE, warning=FALSE}
+model_output <- capture.output(sarima(unrate.ts, 0,1,0,1,1,2,12))
+model_output <- capture.output(sarima(unrate.ts, 0,1,0,0,1,1,12))
+```
+
+Below is the summary of SARIMA(0,1,0,1,1,2,12), which is helpful to write the equation of the model.
+
+```{r, echo=FALSE}
+fit <- Arima(unrate.ts, order=c(0,1,0), seasonal=c(1,1,2))
+summary(fit)
+```
+
+From the ARIMA(0,1,0)(1,1,2)\[12\] model summary coefficients above, the model equation can be written as:
+
+$$x_t = 0.5899x_{t-1} - 1.6247x_{t-12} + 0.6577x_{t-13} + w_t + 0.2157w_{t-1} + 0.2067w_{t-2} + 0.1956w_{t-3}$$
+
+## Compare with Benchmark Methods
+
+Now let's compare our fitted model with two benchmark methods, Mean and Seasonal Naive method.
+
+```{r, echo=FALSE}
+f1 <- meanf(unrate.ts, h=36)
+p1 <- checkresiduals(f1)
+#accuracy(f1)
+
+f2 <- snaive(unrate.ts, h=36)
+p2 <- checkresiduals(f2)
+
+#f3 <- rwf(unrate.ts, drift=TRUE, h=36)
+#checkresiduals(f3)
+```
+
+The result table shows the comparison of RMSE, MAE, and MASE scores for the two benchmark models and our fitted model. It is clear that our fitted model has much lower errors in all the three values, which means our model is a descent model.
+
+```{r, echo=FALSE}
+d1 <- as.data.frame(accuracy(f1))
+d2 <- as.data.frame(accuracy(f2))
+#d3 <- as.data.frame(accuracy(f3))
+
+pred <- forecast(fit, 36)
+d4 <- as.data.frame(accuracy(pred))
+
+table1 <- rbind(d4, d1,d2)
+row.names(table1) <- c("Fit","Mean", "SNaive")
+# drop some columns for final table
+table2 <- subset(table1, select=-c(ME,MPE, MAPE, ACF1))
+table2
+knitr::kable(table2)
+```
+
+## Forecast
+
+Here is the forecasted unemployment rate in the United States for the next three years (36 months), and the forecasts are commensurate with the original time series. The unemployment rate is expected to be decreasing a little bit, with the slope of the line and the confidence bands showing in the plot.
+
+```{r, echo=FALSE}
+# forecast for next 3 years
+fit %>% forecast(h=36) %>% autoplot
+```
+
+## Seasonal Cross Validation
+
+Here is the result of seasonal cross validation performed on the best chosen model of ARIMA(0,1,0,1,1,2,12), and we see that the MSE for the cross validation using 12 step adhead forecasts is a little bit lower than the 1 step ahead forecasts.
+
+```{r, echo=FALSE}
+forecast.fit <- function(unrate.ts, h){forecast(fit, h=h)}
+
+
+err1 <- tsCV(unrate.ts, forecastfunction = forecast.fit, h=1)
+
+err3 <- tsCV(unrate.ts, forecastfunction = forecast.fit, h=12)
+
+cat("The MSE of best chosen model with seasonal cross validation using 1 step ahead forecasts is",round(mean(err1^2, na.rm=TRUE),2),"\n")
+
+cat("The MSE of best chosen model with seasonal cross validation using 12 step ahead forecasts is",round(mean(err3^2, na.rm=TRUE),2))
+
+```

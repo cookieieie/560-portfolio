@@ -1,0 +1,43 @@
+---
+title: "Data Sources"
+---
+
+## Yahoo! Finance
+
+![](ds01.png)
+
+Yahoo! Finance is a media property that provides financial news, data and commentary including stock quotes, press releases, financial report etc. It also offers some online tools for personal finance management. In addition to posting partner content from other websites, it posts original stories by the team of journalists as well. In 2017, Yahoo! Finance added the feature to look at news surrounding crypotocurrency, listing over 9,000 unique coins including the two most popular ones Bitcoin and Ethereum.
+
+Almost all the stock indexes can be found through Yahoo! Finance all over the world. Specifically, to download the historical stock prices for certain company, simply enter the company name or stock index to search. Time period and frequency can also be customized for certain preferences, and download with a csv file. There are a lot of stock indexes data will be used through out this project, to discover and answer the questions asked in the introduction section, for example, Apple, Meta, and Tesla will be the focus for analysis, and many other companies from different industries will be analyzed as well.
+
+Here is the preview of one of the data sets, the Apple historical stock prices, downloaded from Yahoo! Finance that will be used for this project.
+
+![](ds03.jpeg)
+
+[Download Data From Yahoo! Finance Here](https://finance.yahoo.com/quote/TSLA/history?period1=1338508800&period2=1675209600&interval=1mo&filter=history&frequency=1mo&includeAdjustedClose=true)
+
+## FRED Economic Data
+
+![](ds02.jpeg)
+
+Federal Reserve Economic Data, FRED, is an online database consisting of hundreds of thousands of economic data time series from scores of national, international, public, and private sources. FRED, created and maintained by the Research Department at the Federal Reserve Bank of St. Louis, goes far beyond simply providing data: It combines data with a powerful mix of tools that help the user understand, interact with, display, and disseminate the data. FRED has contained many of the more popular figures reported by the Board of Governors, Bureau of Economic Analysis, Bureau of Labor Statistics, and Census---among others.
+
+The data are accessible from a variety of different hardware and software, with the primary point of access being the FRED website. By directly downloading the record data from the FRED website, they will be pretty useful for the time series analysis of the relationship between the stock market and the economic conditions overall. Specifically, the Consumer Price Index (CPI), unemployment rate, and Gross Domestic Product (GDP) will be three main indicators from the economic perspective to analyze the changes in trends of the stock market.
+
+Here is the preview of one of the data sets, the unemployment rate, downloaded from FRED that will be used for this project.
+
+![](ds04.jpeg)
+
+[Download Data From FRED Here](https://fred.stlouisfed.org/)
+
+## Kaggle
+
+![](ds05.jpeg)
+
+Kaggle is an online community platform for data scientists and machine learning enthusiasts. Kaggle allows users to collaborate with other users, find and publish data sets, use GPU integrated notebooks, and compete with other data scientists to solve data science challenges. Users can also find and publish data sets, explore and build models in a web-based data science environment. This is a very easy to use website to find any relevant data sets by simply searching for keywords. A cryptocurrency historical prices data set from Kaggle will be used for this project. There are plenty of historical prices of coins available in this data set and the strategy to choose two most influential and most important ones, Bitcoin and Ehtereum, from all these coins to represent the crypto market will be used in this project.
+
+Here is the preview of one of the data sets, the Bitcoin historical prices, downloaded from Kaggle that will be used for this project.
+
+![](ds06.jpeg)
+
+[Download Data From Kaggle Here](https://www.kaggle.com/datasets/sudalairajkumar/cryptocurrencypricehistory)
