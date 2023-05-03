@@ -128,7 +128,7 @@ knitr::kable(rmse.table)
 
 Below is a recap of the forecasting plot from the best fitted ARIMA (3,1,3) model with a log transformation of the original data. This forecast plot implies a pretty slightly increasing trend with a confidence band, and the confidence band is pretty wide with an upper and lower limit. This forecast of course could not predict the future external factors that could potentially affect the stock prices significantly, such as economic downturn or company financial crisis. So, the ARIMA model has done a descent job on forecasting overall.
 
-![](arima_forecast.png){width="480"}
+![](meta_predict.png){width="480"}
 
 Now let's compare the RMSE scores for the ARIMA model fitted from the ARMA/ARIMA/SARIMA section with the three neural network models. The table below we have already seen from the DL model comparison section, and concluded that both of the RNN with regularization and GRU neural network with regularization have the best model performances with relatively low training and testing RMSE scores.
 

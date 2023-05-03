@@ -40,8 +40,8 @@ library(tidyquant)
 library(plotly)
 library(ggplot2)
 ```
-
-## Get Information for the Original Data
+## Economic Factor
+### Explore Data
 
 ```{r, echo=FALSE}
 unh <- read.csv("./data/yahoo/healthcare/UNH.csv")
@@ -96,11 +96,11 @@ autoplot(data.ts[,c(2:7)], facets=TRUE) +
   ggtitle("Economic Factors Influencing UNH Stock Prices")
 ```
 
-## Two Ways of Model Fitting
+### Model Fitting
 
 Now we are going to fit models and find out the best model that is going to be used for forecasting in the end. Two methods of model fitting are going to be use: `auto.arima()` directly from the `R` library, and manually fitting model. Two to three models will be produced and we are going to select one best model based on the lowest RMSE scores in the end.
 
-### Fitting Model Using `"auto.arima()"`
+#### Using `auto.arima()`
 
 Below is the model summary that is fitted using `"auto.arima()"`, and it give a model of ARIMA(1,0,0)(0,0,1)\[4\], with the response variable of UNH stock price and five predictors: GDP, CPI, Unemployment rate, interest rate, and inflation.
 
@@ -121,7 +121,7 @@ From the model diagnostic of the automatically fitted model, both of the ACF lag
 checkresiduals(auto.fit)
 ```
 
-### Fitting Model Manually
+#### Fitting Manually
 
 Here we are fitting the model manually, with the same five predictors mentioned above. Below is a summary output of a linear regression, with UnitedHealth Group Incorporated stock price as the response variable, and GDP, CPI, Unemployment rate, Interest rate, and Inflation as predictors fitting the linear model. From the p-values of this summary output, we see that all the five variables are statistically significant to the response variable, since all of them are less than 0.05. This is a good sign that we are picking the right variables for prediction.
 
@@ -246,7 +246,7 @@ set.seed(1234)
 model_output3 <- capture.output(sarima(res.fit, 1,0,0, 0,0,1,4)) 
 ```
 
-## Cross Validation to Find the Best Model
+### Cross Validation
 
 Here we are using the cross validation method to plot the RMSE values for each of the three model and then find the best model based on their RMSE. In the plot below, we see that fit 3 ($ARIMA(0,1,0)(0,1,1)[4]$) is the best model since it has lower RMSE values than fit 2 ($ARIMA(1,1,0)(0,1,1)[4]$), and it has a more stable RMSE values than fit 1 ($ARIMA(1,0,0)(0,0,1)[4]$) across all the horizon. Therefore, I will choose fit 3, which is the $ARIMA(0,1,0)(0,1,1)[4]$ as the optimal model to use in forecast.
 
@@ -315,7 +315,7 @@ Here is the RMSE values for fit 3, $ARIMA(0,1,0)(0,1,1)[4]$ model.
 colMeans(rmse3,na.rm=TRUE)
 ```
 
-## Fit the Optimal Model
+### Fit Best Model
 
 Here we are fitting an $ARIMA(0,1,0)(0,1,1)[4]$ model as the best model for forecasting. From the equation for the fitted model below, we see that all variables, GDP, CPI, Unemployment rate, and Interest rate have a concurrent influence on the stock price for UNH, meaning as these variables increase, the stock price for UNH will increase at the same time. While the variable inflation has a reverse effect on the stock price for UNH, meaning as inflation increases, the UNH stock price will decrease at the same time. All of these make sense, while in my understanding, the unemployment rate and interest rate variable should have reverse effects to the stock market in general, but for the UNH stock price, these two variables could be exceptions that did not have a negative impact in the end.
 
@@ -334,7 +334,7 @@ summary(fit)
 
 $$x_t = w_t - 0.7543w_{t-1} + 0.0312*GDP + 2.0946*CPI + 7.2339*Unemp_rate + 9.7836*Interest_rate - 3.437*Inflation$$
 
-## Forecasting
+### Forecasting
 
 Finally, we are going to use the fitted optimal model above to forecast the UNH stock price for the next three years. We see that based on the five predictors, the stock price for UNH is going to continually increase a lot.
 
@@ -365,9 +365,288 @@ fxreg <- cbind(GDP = fgdp$mean,
 fcast <- forecast(fit, xreg=fxreg)
 
 autoplot(fcast) + xlab("Year") +
-  ylab("UNH Stock Prices ($)")
+  ylab("UNH Stock Prices ($)") +
+  ggtitle("UNH Stock Prices Forecasts: ARIMA(0,1,0)(1,1,2)[12]")
+```
+```{r, echo=FALSE}
+# png(filename = "unh_predict.png")
+# autoplot(fcast) + xlab("Year") +
+#   ylab("UNH Stock Prices ($)") +
+#   ggtitle("UNH Stock Prices Forecasts: ARIMA(0,1,0)(1,1,2)[12]")
+# dev.off()
 ```
 
+## Weather Factor
+
+### Explore Data
+```{r, echo=FALSE}
+# read in weather data
+weather <- read_csv("./data/noaa/drought.csv", skip=2, show_col_types = FALSE)
+weather <- subset(weather, select= c(Year,`Drought Count`, `Flooding Count`, `Severe Storm Count`, `Tropical Cyclone Count`))
+colnames(weather) <- c("Year", "Drought", "Flooding", "Severe_Storm", "Tropical_Cyclone")
+#weather
+# read in vz stock prices data
+vz <- read_csv("./data/yahoo/telecommunications/VZ.csv", show_col_types = FALSE)
+vz <- subset(vz, select=c(Date, `Adj Close`))
+colnames(vz)[2] <- "VZ"
+# extract only year from Date column
+# to be merged with weather data
+vz$Year <- as.numeric(format(vz$Date, "%Y"))
+#head(vz)
+#tail(vz)
+```
+
+```{r, echo=FALSE}
+# subset vz data of first day of each year from 1985 to 2023 
+vz <- vz[c(1,13,25,37,49,61,73,85,97,109,121,133,145,157,169,181,193,205,217,229,241,253,265,277,289,301,313,325,337,349,361,373,385,397,399,411,423,435,447,459),]
+vz <- subset(vz, select=-c(Date))
+#vz
+```
+
+First let's begin with our data set. Below is a glance for the data we are going to use to build a ARIMAX model to predict the Verizon Communications Inc (VZ) stock price, which is from the telecommunication sector of the stock market, with several important weather conditions factors that could potentially impact the stock prices of the stock market mentioned at the beginning of the literature review section.
+
+```{r, echo=FALSE}
+df_list <- list(weather, vz)
+# merge the 2 dataframes 
+data <- Reduce(function(x,y) merge(x,y, all=TRUE), df_list)
+# remove all the rows with NAs
+data <- na.omit(data)
+# reset row indexes
+rownames(data) <- 1:nrow(data)
+data <- data[,c(1,6,2,3,4,5)]
+head(data)
+```
+Below is a data visualization for each column from the above data set. VZ on the top is the response variable and the other four variables are the predictors that are going to used in the ARIMAX model. The four variables are drought, flooding, severe storm and tropical cyclone, which are frequent and significant weather conditions that are the most influential to the stock market.  
+
+```{r, echo=FALSE}
+data.ts <- ts(data, start=c(1985), end=c(2023), frequency=1)
+
+autoplot(data.ts[,c(2:6)], facets=TRUE) +
+  xlab("Year") + ylab("") +
+  ggtitle("Weather Conditions Influencing VZ Stock Prices")
+```
+### Model Fitting
+
+Now we are going to fit models and find out the best model that is going to be used for forecasting in the end. Two methods of model fitting are going to be use: `auto.arima()` directly from the `R` library, and manually fitting model. Two to three models will be produced and we are going to select one best model based on the lowest RMSE scores in the end.
+
+#### Using `auto.arima()`
+
+Below is the model summary that is fitted using `auto.arima()`, and it give a model of ARIMA(2,0,2), with the response variable of VZ stock price and four predictors: drought, flooding, severe storm, and tropical cyclone.
+
+```{r, echo=FALSE}
+xreg <- cbind(drought = data.ts[,"Drought"],
+              flooding = data.ts[,"Flooding"],
+              severe_storm = data.ts[,"Severe_Storm"],
+              cyclone = data.ts[,"Tropical_Cyclone"])
+
+auto.fit <- auto.arima(data.ts[,"VZ"], xreg=xreg)
+summary(auto.fit)
+```
+From the model diagnostic of the automatically fitted model, both of the ACF lag plot and residuals plot look pretty good as all the lags are inside of the confidence bands, and the residuals are almost normally distributed with a mean centered around 0.
+
+```{r, echo=FALSE}
+checkresiduals(auto.fit)
+```
+
+#### Fitting Manually
+Here we are fitting the model manually, with the same four predictors mentioned above. Below is a summary output of a linear regression, with Verizon Communications Inc. stock price as the response variable, and drought, flooding, severe storm, and tropical cyclone as predictors fitting the linear model. From the p-values of this summary output, we see that only the severe storm is statistically significant to the response variable, which is significantly less than 0.05. This is a good sign to tell us that what variables are the most influential in the model for forecasting the stock prices of VZ. 
+
+```{r, echo=FALSE}
+data$Drought <- ts(data$Drought,star=decimal_date(as.Date("1985",format = "%Y")), frequency = 1)
+data$Flooding <- ts(data$Flooding, star=decimal_date(as.Date("1985",format = "%Y")), frequency = 1)
+data$Severe_Storm <- ts(data$Severe_Storm, star=decimal_date(as.Date("1985",format = "%Y")), frequency = 1)
+data$Tropical_Cyclone <- ts(data$Tropical_Cyclone, star=decimal_date(as.Date("1985",format = "%Y")), frequency = 1)
+data$VZ <- ts(data$VZ, star=decimal_date(as.Date("1985",format = "%Y")), frequency = 1)
+
+
+fit.reg <- lm(VZ ~ Drought+Flooding+Severe_Storm+Tropical_Cyclone, data=data)
+#fit.reg <- lm(VZ ~ Severe_Storm, data=data)
+summary(fit.reg)
+```
+By looking at the ACF and PACF plot of the residuals from the above linear model, most lags are inside of the ACF and PACF plots, therefore, we do not need to further difference the residuals of the fitted linear regression model in the next step. From the ACF plot, we can decide that $q=1,3$ and $Q=1$, and from the PACF plot, we can decide that $p=1,2$, and $P=1$, and since the data has not been differenced, then $d=0$. Next, we can fit the model manually with these parameters, and then find a best model.  
+
+```{r, echo=FALSE}
+res.fit <- ts(residuals(fit.reg), frequency=1)
+
+#par(mfrow=c(1,2))
+p1 <- acf(res.fit)
+p2 <- Pacf(res.fit)
+```
+```{r,echo=FALSE}
+#q=1,3 Q=1 , p=1,2, P=1
+#write a function
+SARIMA.c=function(p1,p2,q1,q2,P1,P2,Q1,Q2,d1,d2,data){
+  
+  temp=c()
+  d=0
+  D=0
+  s=1
+  
+  i=1
+  temp= data.frame()
+  ls=matrix(rep(NA,9*52),nrow=52)
+  
+  
+  for (p in p1:p2)
+  {
+    for(q in q1:q2)
+    {
+      for(P in P1:P2)
+      {
+        for(Q in Q1:Q2)
+        {
+          for(d in d1:d2)
+       
+        {
+          if(p+d+q+P+D+Q<=8)
+          {
+            
+            model<- Arima(data,order=c(p-1,d,q-1),seasonal=c(P-1,D,Q-1))
+            ls[i,]= c(p-1,d,q-1,P-1,D,Q-1,model$aic,model$bic,model$aicc)
+            i=i+1
+            #print(i)
+            
+          }
+          
+        }
+      }
+    }
+    
+  }
+  
+  }
+  temp= as.data.frame(ls)
+  names(temp)= c("p","d","q","P","D","Q","AIC","BIC","AICc")
+  
+  temp
+  
+}
+
+##q=1,3 Q=1 , p=1,2, P=1 d=0
+
+output=SARIMA.c(p1=1,p2=3,q1=1,q2=3,P1=1,P2=2,Q1=1,Q2=2,d1=0,d2=0,data=res.fit)
+#output
+```
+
+Below is an output table with the minimum AIC, AICc, and BIC with corresponding $p,d,q,P,D,Q$. Two optimal models are generated by manually fitting model. Minimum AIC, AICc, and BIC give an $ARIMA(0,0,2)$ model. Next, let's do model diagnostics to check the residuals from the models.
+
+```{r, echo=FALSE}
+aic <- output[which.min(output$AIC),]
+aicc <- output[which.min(output$AICc),]
+bic <- output[which.min(output$BIC),]
+
+mintable <- rbind(aic, aicc, bic)
+row.names(mintable) <- c("Minimum AIC", "Minimum AICc", "Minimum BIC")
+knitr::kable(mintable)
+```
+
+Let's look at the model diagnostics of the $ARIMA(0,0,2)$ model that is manually fitted. The standardized residuals plot show no clear trend but some seasonality, and the most of the time the mean is centered around 0. Most of the lags from the ACF of residuals plot are inside of the confidence interval bands, and the normal Q-Q plot of standardized residuals showing a relative straight line except for the two tails. The p-values for Ljung-Box statistic plot showing most of the p-values are at or above the 0.05 significance level, which is a good indicator of an adequate model.
+
+```{r, echo=FALSE}
+set.seed(1234)
+
+model_output1 <- capture.output(sarima(res.fit, 0,0,2)) 
+```
+
+
+### Cross Validation
+Here we are using the cross validation method to obtain the RMSE values for each of the two model and then find the best model based on their RMSE. From the results below, it is clear that the model fitted manually has a little bit lower RMSE value compared to the one fitted using `auto.arima()`. Therefore, I will choose the manually fitted model, which is the $ARIMA(0,0,2)$ as the optimal model to use in forecast.
+
+```{r, warning=FALSE, echo=FALSE}
+n=length(res.fit)
+k=9
+
+# n=79
+# n-k=70; 70/4=17.5;
+ 
+rmse1 <- matrix(NA,5,1)
+rmse2 <- matrix(NA,5,1)
+
+st <- tsp(res.fit)[1]+(k-1)/1 
+
+for(i in 1:5)
+{
+  #xtrain <- window(a10, start=st+(i-k+1)/12, end=st+i/12)
+  xtrain <- window(res.fit, end=st + i-1)
+  xtest <- window(res.fit, start=st + (i-1) + 1/4, end=st + i)
+  
+  #ARIMA(2,0,2) from auto.arima()
+  fit <- Arima(xtrain, order=c(2,0,2),
+                include.drift=TRUE, method="ML")
+  fcast <- forecast(fit, h=2)
+  
+  
+  # ARIMA(0,0,2) with min AIC, AICc, BIC
+  fit2 <- Arima(xtrain, order=c(0,0,2),
+                include.drift=TRUE, method="ML")
+  fcast2 <- forecast(fit2, h=2)
+
+  rmse1[i,1:length(xtest)]  <- sqrt((fcast$mean-xtest)^2)
+  rmse2[i,1:length(xtest)] <- sqrt((fcast2$mean-xtest)^2)
+}
+
+#plot(1, colMeans(rmse1,na.rm=TRUE), type="l", col=2, xlab="horizon", ylab="RMSE", lwd=2)
+#lines(1, colMeans(rmse2,na.rm=TRUE), type="l",col=3, lwd=2)
+#legend("topleft",legend=c("fit1","fit2"),col=2:3,lty=1)
+
+cat("The RMSE value of model from auto.arima() =", colMeans(rmse1,na.rm=TRUE), "\n")
+cat("The RMSE value of model fitted manually =",colMeans(rmse2,na.rm=TRUE), "\n")
+```
+
+
+### Fit Best Model
+
+Here we are fitting an $ARIMA(0,0,2)$ model as the best model for forecasting. From the equation for the fitted model below, we see that flooding and severe storm have a concurrent influence on the stock price for VZ, meaning as the value of these two variables increase, the stock price for VZ will increase at the same time. While the variable drought and tropical cyclone has a reverse effect on the stock price for VZ, meaning as the value of these two variables increase, the VZ stock price will decrease at the same time. All of these make sense, while in my understanding, the two extreme weather condition variables that have a concurrent influence on the stock price should have reverse effects to the stock market in general, but for the VZ stock price, these two variables could be exceptions that did not have a negative impact in the end.
+
+```{r, echo=FALSE}
+xreg <- cbind(drought = data.ts[,"Drought"],
+              flooding = data.ts[,"Flooding"],
+              severe_storm = data.ts[,"Severe_Storm"],
+              cyclone = data.ts[,"Tropical_Cyclone"])
+
+fit <- Arima(data.ts[,"VZ"], order=c(0,0,2), xreg=xreg)
+summary(fit)
+```
+
+**Equation for the fitted model**:
+
+$$x_t = w_t + 0.6266w_{t-1} + w_{t-2} - 2.0285*drought + 1.0666*flooding + 1.17114*severestorm - 0.13* tropicalcyclone$$
+
+### Forecasting
+
+Finally, we are going to use the fitted optimal model above to forecast the VZ stock price for the next three years. We see that based on the four predictors, the stock price for VZ is going to drop a lot, from around 45 dollars to around 25 dollars. This is a kind of surprising result.  
+
+```{r, echo=FALSE}
+drought.fit <- auto.arima(data$Drought)
+fdrought <- forecast(drought.fit)
+
+flood.fit <- auto.arima(data$Flooding)
+fflood <- forecast(flood.fit)
+
+storm.fit <- auto.arima(data$Severe_Storm)
+fstorm <- forecast(storm.fit)
+
+cyclone.fit <- auto.arima(data$Tropical_Cyclone)
+fcyc <- forecast(cyclone.fit)
+
+fxreg <- cbind(drought = fdrought$mean,
+              flooding =fflood$mean,
+              severe_storm = fstorm$mean,
+              cyclone = fcyc$mean)
+
+fcast <- forecast(fit, xreg=fxreg)
+
+autoplot(fcast) + xlab("Year") +
+  ylab("VZ Stock Prices ($)") +
+  ggtitle("VZ Stock Prices Forecasts: ARIMA(0,0,2)")
+```
+```{r, echo=FALSE}
+# png(filename = "vz_predict.png")
+# autoplot(fcast) + xlab("Year") +
+#   ylab("VZ Stock Prices ($)") +
+#   ggtitle("VZ Stock Prices Forecasts: ARIMA(0,0,2)")
+# dev.off()
+```
 # Works Cited
 
 Miranda Marquit, Aug. 5, 2019, 5 Economic Factors That Influence Stocks, U.S. News, https://money.usnews.com/money/blogs/the-smarter-mutual-fund-investor/slideshows/economic-factors-that-influence-stocks?onepage;

@@ -14,17 +14,16 @@ Specifically, the Dow contains 30 stocks, and it is represented by a very large 
 
 ## Important Questions
 
-1.  Are we able to predict Apple's stock prices for the next three year based on current available stock prices?
-2.  Are we able to predict Meta's stock prices for the next three year based on current available stock prices?
-3.  Are we able to predict Tesla's stock prices for the next three years based on current available stock prices?
-4.  What are the trends of stock prices of the 5 most valuable tech companies until now?
-5.  Are there clear seasonal components for certain stocks and why?
-6.  Is there a relationship between GDP and stock prices for certain companies in the United States?
-7.  Is consumer price index (CPI) an important indicator for GDP?
-8.  Is unemployment rate an important indicator for GDP?
-9.  In which years specifically, the stock market has been impacted the most heavily by the economic factors?
-10. Does cryptocurrency market has the same trend as the stock markets overall?
-
+1.  Are we able to predict Meta's stock prices for the next three year based on current available stock prices?
+2.  Are we able to predict UnitedHealth Group's stock prices for the next three year based on current available stock prices?
+3.  Are we able to predict Exxon Mobil's stock prices for the next three years based on current available stock prices?
+4.  Are we able to predict Extra Space Storage Inc's stock prices for the next three years based on current available stock prices?
+5.  What are the specific important economic factors that potentially affect stock prices?
+6.  How does GDP as an economic factor affect the stock prices overall?
+7.  How does severe weather conditions affect the stock prices overall?
+8.  Which deep learning models are the best in forecasting Meta's stock prices?
+9.  Can we predict stock prices using both statistical analysis model and financial time series model?
+10. What are the overall trends of stock prices for different sectors in the market based on forecasting results?
 
 ## Works Cited
 

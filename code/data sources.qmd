@@ -30,14 +30,14 @@ Here is the preview of one of the data sets, the unemployment rate, downloaded f
 
 [Download Data From FRED Here](https://fred.stlouisfed.org/)
 
-## Kaggle
+## National Oceanic and Atmospheric Administration (NOAA)
 
-![](ds05.jpeg)
+![](ds07.jpeg)
 
-Kaggle is an online community platform for data scientists and machine learning enthusiasts. Kaggle allows users to collaborate with other users, find and publish data sets, use GPU integrated notebooks, and compete with other data scientists to solve data science challenges. Users can also find and publish data sets, explore and build models in a web-based data science environment. This is a very easy to use website to find any relevant data sets by simply searching for keywords. A cryptocurrency historical prices data set from Kaggle will be used for this project. There are plenty of historical prices of coins available in this data set and the strategy to choose two most influential and most important ones, Bitcoin and Ehtereum, from all these coins to represent the crypto market will be used in this project.
+The National Oceanic and Atmospheric Administration (NOAA) is a science-based federal agency within the Department of Commerce with regulatory, operational, and information service responsibilities with a presence in every state and our territories. The mission of NOAA is to provide daily weather forecasts, severe storm warnings, climate monitoring to fisheries management, coastal restoration, and supporting of marine commerce. NOAA's products and services support economic vitality and affect more than one-third of America's gross domestic product.
 
-Here is the preview of one of the data sets, the Bitcoin historical prices, downloaded from Kaggle that will be used for this project.
+Here is a snapshot of the data downloaded directly from NOAA that is going to be used in this project. This is time series data set that contains the frequency and cost of billion-dollar weather and climate events from year 1980 to 2023. There are seven main climate events: drought, flooding, freeze, severe storm, tropical cyclone, wildfire, and winter storm.
 
 ![](ds06.jpeg)
 
-[Download Data From Kaggle Here](https://www.kaggle.com/datasets/sudalairajkumar/cryptocurrencypricehistory)
+[Download Data From NOAA Here](https://www.ncei.noaa.gov/access/billions/time-series)

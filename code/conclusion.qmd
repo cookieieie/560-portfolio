@@ -1,0 +1,49 @@
+---
+title: "Conclusions"
+---
+
+Accurately predicting stock prices is an extremely challenging task, and the stock market is known for being volatile, dynamic, and nonlinear, since there are various factors to be considered, such as global economic conditions, unexpected weather conditions, politics, a specific company's financial performance etc. In this project, various kinds of models have been used in predicting stock prices, such as statistical analysis models used on time series data models such as ARIMA, SARIMA, and ARIMAX models, financial time series model the GARCH model, and deep learning models such as recurrent neural network (RNN), long short term memory (LSTM) neural networks, and gated recurrent unit (GRU) neural networks models. The goal of this project is to accurately predict the stock prices based on previous stock prices using these models. Specifically, besides predicting the stock prices for each sector in the stock market overall, economic factors and weather factors have also been added to explore their effects on stock prices for specific sector in the market.
+
+Below is a summary from this project in terms of stock prices prediction. Two main factors, economic factors and weather conditions are added as predictors to the response variable in modeling. The telecommunication sector, with Verizon Communication Inc (VZ) as a representative stock, is chosen to be predicted along with the four extreme weather conditions. The health care sector, with UnitedHealth Group Incorporated (UNH) as a representative stock, is chosen to be predicted along with the five important economic factors. The forecasting results are presented below, which are directly derived from ARIMAX or SARIMAX models. From the economic factors perspective, all the five predictors are significant: GDP, CPI, unemployment rate, interest rate, and inflation, with only inflation having a reverse effect on the stock prices. From the weather conditions perspective, only severe storm appears to be a significant factor to the stock prices of VZ, while overall, drought and tropical cyclone have reverse effects on the stock prices.
+
+![](conclude.jpeg)
+
+Below is recap and summary of the various models results in predicting multiple stock prices in the next three years and factors that could potentially influence the stock market overall.
+
+### Health Care Sector
+
+The stock price for UnitedHealth Group Incorporated (UNH) is predicted to be increase significantly for the next three years, combined with the economic factors mentioned above.
+
+![](unh_predict.png)
+
+### Telecommunications Sector
+
+The stock price for Verizon Communications Inc. (VZ) is predicted to be decrease significantly for the next three years, combined with the weather factors mentioned above.
+
+\
+![](vz_predict.png)
+
+### Tech Sector
+
+The stock price for Meta Platforms, Inc. (META) is predicted to increase a little bit in the next three years.
+
+\
+![](meta_predict.png)
+
+### Real Estate Sector
+
+The stock price for Extra Space Storage Inc. (EXR) is predicted to increase a little bit in the next three years.
+
+\
+![](exr_predict.png)
+
+### Energy Sector
+
+The stock price for Exxon Mobil Corporation (XOM) is predict not to change quite a lot in the next three years, while with a very wide confidence interval that may bring up variations along the way.
+
+\
+![](xom_predict.png)
+
+## Future Direction
+
+For this project, two important factors, economy and weather, that could potentially impact the stock market are used as predictors to forecasting several stock prices that are in different sectors of the stock market. For the weather factor, as only one of the weather condition mentioned above are statistically significant, there may be other variables that can be used in the models for predictions, and by using a higher number of predictors in the model, the accuracy of forecasting might be better. Another guess is that there are not enough data points used in the model with the weather conditions, since even though the time span is from 1985 to 2023, the frequency of the data is yearly, meaning that only 38 data points are provided from the weather data set. In the future, if there are better data sets that contains a lot more data points such that monthly or quarterly extreme weather events in each year, it will be much better and useful in models for forecasting. Moreover, it is also helpful to discover other factors besides these two, such as politics and the specific performance of a company, to be used in the models to predict future stock prices.
