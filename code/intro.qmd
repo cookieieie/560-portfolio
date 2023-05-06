@@ -12,6 +12,11 @@ The term stock market refers to several exchanges in which shares of publicly he
 
 Specifically, the Dow contains 30 stocks, and it is represented by a very large value increasing or decreasing based on the performances of those stocks. The Dow is calculated by the sum of the prices of the 30 stocks divided by a set divisor, which is really small over time. The Dow is one of the most closely watch indices in the world as it's an indicator of how shares of some of the largest U.S. companies are performing. Also, since the Dow include the top U.S. companies from multiple industries it's commonly used as an indicator of how the U.S. market as a whole is performing. The S&P 500 contains 500 stocks, which may be a better indicator of the U.S. market and the economy as a whole, rather than the Dow, due to having larger numbers of stocks. It is a market capitalization weighted index, therefore, the higher the market capitalization a company has, the higher weight it has on the S&P 500 index. And last but not least, the Nasdaq Composite Index contains roughly 3000 stocks exclusively on Nasdaq, and it is also a market-cap weighted index like the S&P 500. Nasdaq is a good indicator of performance for the technology and internet sector.
 
+
+![](meta.jpeg)
+
+With the specific of interest in Meta's stock prices, this portfolio uses this interest as a starting point to discover the factors that could potentially impact different stock prices in the stock market overall. Five main stock sectors will be discovered and explored throughout this portfolio: the technology sector, the health care sector, the energy sector, the real estate sector, and the telecommunications sector. Two outside factors will be used as predictor variables to forecast stock prices in the models, the economic factors and weather factors. For the economic factors, Gross Domestic Product (GDP), Consumer Price Index (CPI), unemployment rate, interest rate, and inflation are selected. For the weather factors, drought, flooding, severe storm, and tropical cyclone are selected. More details and implementations of these variables will be discussed in the following pages of this portfolio.  
+
 ## Important Questions
 
 1.  Are we able to predict Meta's stock prices for the next three year based on current available stock prices?

@@ -1,6 +1,8 @@
 ---
 title: "Data Visualization"
 ---
+[Download Code for this page here](https://github.com/cookieieie/560-portfolio/blob/main/code/dv.qmd) 
+
 
 ```{r ,echo=FALSE, message=FALSE, warning=FALSE}
 library(flipbookr)
@@ -26,15 +28,16 @@ library(dplyr)
 
 When there are enough data gathered through the multiple data sources discussed in the previous section, it is time to do some data visualizations to obtain a better understanding of each data set with plots. There are two main sections for visualization, the first one is financial data, the stock prices for both tech companies and the cryptocurrency, and the other is economic data, such as GPD and unemployment rate. A series of data visualization plots are created by using plotly and ggplot.
 
-# Stock Prices for Top Tech Companies
+# Five Sectors of Market Visualization 
+## Stock Prices for Tech Sector
 
 ```{r,echo=FALSE}
-amzn <- read.csv("./data/yahoo/AMZN.csv")
-goog <- read.csv("./data/yahoo/GOOG.csv")
-msft <- read.csv("./data/yahoo/MSFT.csv")
-aapl <- read.csv("./data/yahoo/AAPL.csv")
-tsla <- read.csv("./data/yahoo/TSLA.csv")
-meta <- read.csv("./data/yahoo/META.csv")
+amzn <- read.csv("./data/yahoo/tech/AMZN.csv")
+goog <- read.csv("./data/yahoo/tech/GOOG.csv")
+msft <- read.csv("./data/yahoo/tech/MSFT.csv")
+aapl <- read.csv("./data/yahoo/tech/AAPL.csv")
+tsla <- read.csv("./data/yahoo/tech/TSLA.csv")
+meta <- read.csv("./data/yahoo/tech/META.csv")
 
 colnames(amzn)[6] = "AMZN"
 colnames(goog)[6] = "GOOG"
@@ -79,134 +82,290 @@ g<- ggplot(stock, aes(x=Date)) +
   geom_line(aes(y=AAPL, colour="AAPL"))+
   geom_line(aes(y=MSFT, colour="MSFT"))+
    labs(
-    title = "Stock Prices for Top Market Capitalization Tech Companies",
-    subtitle = "From 2012-2022",
+    title = "Stock Prices for Tech Sector From 2012-2022",
     x = "Date",
     y = "Adjusted Closing Prices")+
-    guides(colour=guide_legend(title="Tech Companies")) 
+    guides(colour=guide_legend(title="Tech Sector")) 
 
 
 ggplotly(g) %>%
   layout(hovermode = "x")
 ```
 
-# Stock Prices for Top Cryptocurrency
+## Stock Prices for Health Care Sector
+
+The plot below shows the 5 representative stock prices in the health care sector in the stock market from 2001 to 2023, which are CVS Health Corporation (CVS), UnitedHealth Group Incorporated (UNH), Pfizer Inc. (PFE), Johnson & Johnson (JNJ), and Elevance Health Inc. (ELV). UNH and ELV have the highest stock prices among the 5 stocks and their prices are pretty close all the time from 2001 to 2023. While PFE has the lowest stock prices all the time and the prices have been very stable over time.  
 
 ```{r,echo=FALSE}
-bit <- read.csv("./data/kaggle/BTC-USD.csv")
-ether <- read.csv("./data/kaggle/ETH-USD.csv")
+cvs <- read.csv("./data/yahoo/healthcare/CVS.csv")
+unh <- read.csv("./data/yahoo/healthcare/UNH.csv")
+pfe <- read.csv("./data/yahoo/healthcare/PFE.csv")
+jnj <- read.csv("./data/yahoo/healthcare/JNJ.csv")
+elv <- read.csv("./data/yahoo/healthcare/ELV.csv")
 
-bit$Date <- as.Date(bit$Date, "%Y-%m-%d")
-ether$Date <- as.Date(ether$Date, "%Y-%m-%d")
+cvs$Date <- as.Date(cvs$Date, "%Y-%m-%d")
+unh$Date <- as.Date(unh$Date, "%Y-%m-%d")
+pfe$Date <- as.Date(pfe$Date, "%Y-%m-%d")
+jnj$Date <- as.Date(jnj$Date, "%Y-%m-%d")
+elv$Date <- as.Date(elv$Date, "%Y-%m-%d")
 
-#head(bit)
-#head(ether)
+colnames(cvs)[6] = "CVS"
+colnames(unh)[6] = "UNH"
+colnames(pfe)[6] = "PFE"
+colnames(jnj)[6] = "JNJ"
+colnames(elv)[6] = "ELV"
+
+df <- cvs %>% inner_join(unh, by = c('Date'))
+df <- df[-c(2:5,7:11, 13)]
+df <- df %>% inner_join(pfe, by=c('Date'))
+df <- df[-c(4:7,9)]
+df <- df %>% inner_join(jnj, by=c("Date"))
+df <- df[-c(5:8,10)]
+df <- df %>% inner_join(elv, by=c('Date'))
+df <- df[-c(6:9,11)]
+
+g<- ggplot(df, aes(x=Date)) +
+  geom_line(aes(y=CVS, colour="CVS"))+
+  geom_line(aes(y=UNH, colour="UNH"))+
+  geom_line(aes(y=PFE, colour="PFE"))+
+  geom_line(aes(y=JNJ, colour="JNJ"))+
+  geom_line(aes(y=ELV, colour="ELV"))+
+   labs(
+    title = "Stock Prices for Health Care Sector from 2001 to 2023",
+    x = "Date",
+    y = "Adjusted Closing Prices")+
+    guides(colour=guide_legend(title="Health Care Sector")) 
+
+
+ggplotly(g) %>%
+  layout(hovermode = "x")
 ```
 
-Below are two separate plots for two most popular cryptocurrencies, Bitcoin and Ethereum. They are created in different plots instead of being together due to the huge differences in stock prices for a long time period, and that could weakens the clear price changes for Ethereum, which has a much lower prices than that of Bitcoin. The time span for Bitcoin is 2014 to 2022 in the plot created by plotly, and the time span for Ethereum is 2015 to 2022 in the plot created by plotly. There were not clear observable seasonality from both plots, but the trends are clearly increasing over time with some fluctuations.
+## Stock Prices for Energy Sector
 
-There are some clear huge increases and drops for both Bitcoin and Ethereum during 2021 and 2022. Cryptocurrency became massively popular during the pandemic months. By creating wealth through high returns with tokens, the space attracted users by promising generous returns on investment. While 2021 created many crypto success stories, with regular people becoming millionaires, 2022 has reversed course as trillions of dollars have been wiped out of the space. Cryptocurrency peaked in November 2021 and has experienced a meteoric collapse since then, with Bitcoin dropping in value from roughly \$68,000 to below \$20,000. The reason is that the industry was plagued by macroeconomic pressures, scandales and meltdowns that wiped out fortunes seemingly overnight.
+The plot below shows the 5 representative stock prices in the energy sector in the stock market from 1994 to 2023, which are Baker Hughes Company (BKR), Exxon Mobil Corporation (XOM), Shell plc (SHEL), Devon Energy Corporation (DVN), and Chevron Corporation (CVX). CVX has the highest stock prices for the recent 10 years, while DVN performs better before 2010. All the five stock prices have a significant decreasing in stocks prices around the second quarter of 2020, which is the beginning of the COVID-19 pandemic, while a significant increasing in stock prices after year 2021, and this is very likely due to the relief of COVID-19 pandemic after the most serious times in the second half of 2020. When people start to going out of home, the demand for energy consumption would be increasing at the same time, so the stock prices for the energy sectors company stock prices.  
 
-```{r,echo=FALSE}
-# plot for bitcoin
-fig <- plot_ly(bit, x = ~Date, y = ~Adj.Close, type = 'scatter', mode = 'lines')
 
-fig <- fig %>% layout(title = "Bitcoin Price from 2014 to 2022", yaxis=list(title ="Adjusted Close Price"))
-fig
+```{r, echo=FALSE}
+bkr <- read.csv("./data/yahoo/energy/BKR.csv")
+xom <- read.csv("./data/yahoo/energy/XOM.csv")
+shel <- read.csv("./data/yahoo/energy/SHEL.csv")
+dvn <- read.csv("./data/yahoo/energy/DVN.csv")
+cvx <- read.csv("./data/yahoo/energy/CVX.csv")
+
+bkr$Date <- as.Date(bkr$Date, "%Y-%m-%d")
+xom$Date <- as.Date(xom$Date, "%Y-%m-%d")
+shel$Date <- as.Date(shel$Date, "%Y-%m-%d")
+dvn$Date <- as.Date(dvn$Date, "%Y-%m-%d")
+cvx$Date <- as.Date(cvx$Date, "%Y-%m-%d")
+
+colnames(bkr)[6] = "BKR"
+colnames(xom)[6] = "XOM"
+colnames(shel)[6] = "SHEL"
+colnames(dvn)[6] = "DVN"
+colnames(cvx)[6] = "CVX"
+
+df <- bkr %>% inner_join(xom, by = c('Date'))
+df <- df[-c(2:5,7:11, 13)]
+df <- df %>% inner_join(shel, by=c('Date'))
+df <- df[-c(4:7,9)]
+df <- df %>% inner_join(dvn, by=c("Date"))
+df <- df[-c(5:8,10)]
+df <- df %>% inner_join(cvx, by=c('Date'))
+df <- df[-c(6:9,11)]
+
+g<- ggplot(df, aes(x=Date)) +
+  geom_line(aes(y=BKR, colour="BKR"))+
+  geom_line(aes(y=XOM, colour="XOM"))+
+  geom_line(aes(y=SHEL, colour="SHEL"))+
+  geom_line(aes(y=DVN, colour="DVN"))+
+  geom_line(aes(y=CVX, colour="CVX"))+
+   labs(
+    title = "Stock Prices for Health Care Sector from 1994 to 2023",
+    x = "Date",
+    y = "Adjusted Closing Prices")+
+    guides(colour=guide_legend(title="Energy Sector")) 
+
+
+ggplotly(g) %>%
+  layout(hovermode = "x")
 ```
 
-```{r,echo=FALSE}
-# plot for ether
-fig1 <- plot_ly(ether, x = ~Date, y = ~Adj.Close, type = 'scatter', mode = 'lines')
+## Stock Prices for Real Estate Sector
 
-fig1 <- fig1 %>% layout(title = "Ethereum Price from 2015 to 2022", yaxis=list(title ="Adjusted Close Price"))
-fig1
+The plot below shows the 5 representative stock prices in the real estate sector in the stock market from 1994 to 2023, which are Extra Space Storage Inc. (EXR), Public Storage (PSA), Simon Property Group, Inc. (SPG), Equity Residential (EQR), and Crown Castle Inc. (CCI). PSA has the highest stock price all the time with a significant increasing after the second quarter of 2020. SPG has very similar trend with that of PSA, being the second highest stock price among the five companies, while after the first quarter of 2020, it stock prices plummeted. The reason is that malls were already suffering as shopping behaviors shifted from malls in recent years, but when the COVID-19 hit, mall experienced a new low, which was a large negative impact to Simon Property Group.  
+
+```{r, echo=FALSE}
+exr <- read.csv("./data/yahoo/realestate/EXR.csv")
+psa <- read.csv("./data/yahoo/realestate/PSA.csv")
+spg <- read.csv("./data/yahoo/realestate/SPG.csv")
+eqr <- read.csv("./data/yahoo/realestate/EQR.csv")
+cci <- read.csv("./data/yahoo/realestate/CCI.csv")
+
+exr$Date <- as.Date(exr$Date, "%Y-%m-%d")
+psa$Date <- as.Date(psa$Date, "%Y-%m-%d")
+spg$Date <- as.Date(spg$Date, "%Y-%m-%d")
+eqr$Date <- as.Date(eqr$Date, "%Y-%m-%d")
+cci$Date <- as.Date(cci$Date, "%Y-%m-%d")
+
+colnames(exr)[6] = "EXR"
+colnames(psa)[6] = "PSA"
+colnames(spg)[6] = "SPG"
+colnames(eqr)[6] = "EQR"
+colnames(cci)[6] = "CCI"
+
+df <- exr %>% inner_join(psa, by = c('Date'))
+df <- df[-c(2:5,7:11, 13)]
+df <- df %>% inner_join(spg, by=c('Date'))
+df <- df[-c(4:7,9)]
+df <- df %>% inner_join(eqr, by=c("Date"))
+df <- df[-c(5:8,10)]
+df <- df %>% inner_join(cci, by=c('Date'))
+df <- df[-c(6:9,11)]
+
+g<- ggplot(df, aes(x=Date)) +
+  geom_line(aes(y=EXR, colour="EXR"))+
+  geom_line(aes(y=PSA, colour="PSA"))+
+  geom_line(aes(y=SPG, colour="SPG"))+
+  geom_line(aes(y=EQR, colour="EQR"))+
+  geom_line(aes(y=CCI, colour="CCI"))+
+   labs(
+    title = "Stock Prices for Real Estate Sector from 2004 to 2023",
+    x = "Date",
+    y = "Adjusted Closing Prices")+
+    guides(colour=guide_legend(title="Real Estate Sector")) 
+
+
+ggplotly(g) %>%
+  layout(hovermode = "x")
 ```
 
-```{r,echo=FALSE}
-#amzn1 <- amzn[amzn$Date > "2017-12-01",]
-#figc <- amzn1 %>% plot_ly(x = ~Date, type="candlestick",
-         # open = ~Open, close = ~AMZN,
-         # high = ~High, low = ~Low) 
-#figc <- figc %>% layout(title = "Candlestick Chart for Amazon for Recent 5 Years")
+## Stock Prices for Telecommunications Sector
 
-#figc
+The plot below shows the 5 representative stock prices in the telecommunications sector in the stock market from 2002 to 2023, which are Netflix, Inc (NFLX), Verizon Communications Inc. (VZ), BCE Inc. (BCE), AT&T (T), and Orange S.A. (ORAN). NFLX has the highest stock prices overall all the time from 2002 to 2023, which are very significant discrepancies from all the other four stock prices. The other four stocks have been very stable with very small increases or decreases all the time.  
+
+```{r, echo=FALSE}
+nflx <- read.csv("./data/yahoo/telecommunications/NFLX.csv")
+vz <- read.csv("./data/yahoo/telecommunications/VZ.csv")
+bce <- read.csv("./data/yahoo/telecommunications/BCE.csv")
+tm <- read.csv("./data/yahoo/telecommunications/T.csv")
+oran <- read.csv("./data/yahoo/telecommunications/ORAN.csv")
+
+nflx$Date <- as.Date(nflx$Date, "%Y-%m-%d")
+vz$Date <- as.Date(vz$Date, "%Y-%m-%d")
+bce$Date <- as.Date(bce$Date, "%Y-%m-%d")
+tm$Date <- as.Date(tm$Date, "%Y-%m-%d")
+oran$Date <- as.Date(oran$Date, "%Y-%m-%d")
+
+colnames(nflx)[6] = "NFLX"
+colnames(vz)[6] = "VZ"
+colnames(bce)[6] = "BCE"
+colnames(tm)[6] = "TM"
+colnames(oran)[6] = "ORAN"
+
+df <- nflx %>% inner_join(vz, by = c('Date'))
+df <- df[-c(2:5,7:11, 13)]
+df <- df %>% inner_join(bce, by=c('Date'))
+df <- df[-c(4:7,9)]
+df <- df %>% inner_join(tm, by=c("Date"))
+df <- df[-c(5:8,10)]
+df <- df %>% inner_join(oran, by=c('Date'))
+df <- df[-c(6:9,11)]
+
+g<- ggplot(df, aes(x=Date)) +
+  geom_line(aes(y=NFLX, colour="NFLX"))+
+  geom_line(aes(y=VZ, colour="VZ"))+
+  geom_line(aes(y=BCE, colour="BCE"))+
+  geom_line(aes(y=TM, colour="TM"))+
+  geom_line(aes(y=ORAN, colour="ORAN"))+
+   labs(
+    title = "Stock Prices for Telecommunications Sector from 2002 to 2023",
+    x = "Date",
+    y = "Adjusted Closing Prices")+
+    guides(colour=guide_legend(title="Telecommunications Sector")) 
+
+
+ggplotly(g) %>%
+  layout(hovermode = "x")
 ```
-
 # Economic Data Visualization
 
-```{r,echo=FALSE}
+```{r,echo=FALSE, warning=FALSE}
 gdp <- read.csv("./data/fred/GDP.csv")
-gdp <- gdp[gdp$DATE > "2011-12-31",]
 gdp$DATE <- as.Date(gdp$DATE, "%Y-%m-%d")
 
 cpi <- read.csv("./data/fred/CPI.csv")
-cpi <- cpi[cpi$DATE > "2011-12-31",]
 cpi$DATE <- as.Date(cpi$DATE, "%Y-%m-%d")
 
 unrate <- read.csv("./data/fred/UNRATE.csv")
-unrate <- unrate[unrate$DATE > "2011-12-31",]
 unrate$DATE <- as.Date(unrate$DATE, "%Y-%m-%d")
 
-#head(cpi)
-#head(gdp)
-#head(unrate)
+int.rate <- read.csv("./data/fred/interest_rate.csv")
+int.rate$DATE <- as.Date(int.rate$DATE, "%Y-%m-%d")
+
+inflation <- read.csv("./data/fred/inflation_EOP.csv")
+inflation$DATE <- as.Date(inflation$DATE, "%Y-%m-%d")
+inflation$T10YIE <- as.numeric(inflation$T10YIE)
+
+# head(gdp)
+# head(cpi)
+# head(unrate)
+# head(inflation)
+# head(int.rate)
 ```
 
-```{r,echo=FALSE}
-df1 <- gdp %>% inner_join(cpi, by = c('DATE'))
-econ <- df1 %>% inner_join(unrate, by =c('DATE'))
-colnames(econ)[1] = "Date"
-colnames(econ)[3] = "CPI"
-#head(econ)
-```
 
-After having an overview and understanding about the financial data collected above, now let's dive deep into the economic data sets collected from Fred Economic Data. There are three economic data sets: Gross Domestic Product (GDP), Consumer Price Index (CPI) and unemployment rate. For each data set, ggplot and ggplotly were used to visualize the data from 2012 to 2022. They were not in the same plot because of different units, one is in dollars, one is the index with the base of year 2015, the other one is a seasonally adjusted percentage. Both of the GDP and CPI have a clear increasing trend, while the unemployment rate has a decreasing trend. While the exception of the COVID-19 pandemic seriously impacted the GDP and unemployment rate at the second quarter of 2020, the CPI did not have a huge negative impact from that, because the pandemic has a positive rate of inflation on CPI.
+After having an overview and understanding about the financial data collected above, now let's dive deep into the economic data sets collected from Fred Economic Data. There are five economic data sets: Gross Domestic Product (GDP), Consumer Price Index (CPI), unemployment rate, real interest rate, and breakeven inflation. For each data set, ggplot is used to visualize the data from different time spans ranging from 1947 to 2022. They were not in the same plot because of different units, one is in dollars, one is the index with the base of year 2015, the other having a seasonally adjusted percentage or not adjusted percentage. Both of the GDP and CPI have a clear increasing trend, while the real interest rate has a decreasing trend, and the unemployment rate and breakeven inflation are more random through time. While the exception of the COVID-19 pandemic seriously impacted the GDP and unemployment rate at the second quarter of 2020, the CPI did not have a huge negative impact from that, because the pandemic has a positive rate of inflation on CPI.
 
-```{r,echo=FALSE}
-g1<- ggplot(econ, aes(x=Date)) +
-  geom_line(aes(y=GDP, colour="GDP"))+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+require(gridExtra)
+g1<- ggplot(gdp, aes(x=DATE, y=GDP)) +
+  geom_line()+
    labs(
-    title = "Gross Domestic Product in the U.S. from 2012 to 2022",
-    subtitle = "From 2012-2022",
+    title = "GDP",
+    subtitle = "From 1947-2022",
     x = "Date",
-    y = "Billions of Dollars")+
-    guides(colour=guide_legend(title="GDP")) 
+    y = "Billions of Dollars")
 
-ggplotly(g1) %>%
-  layout(hovermode = "x")
-```
-
-```{r,echo=FALSE}
-g2<- ggplot(econ, aes(x=Date)) +
-  geom_line(aes(y=CPI, colour="CPI"))+
+g2<- ggplot(cpi, aes(x=DATE, y=USACPIALLMINMEI)) +
+  geom_line()+
    labs(
-    title = "Consumer Price Index: All Items for the U.S. from 2012 to 2022",
-    subtitle = "From 2012-2022",
+    title = "CPI",
+    subtitle = "From 1960-2022",
     x = "Date",
-    y = "Index 2015=100")+
-    guides(colour=guide_legend(title="CPI")) 
+    y = "Index 2015=100")
 
-ggplotly(g2) %>%
-  layout(hovermode = "x")
-```
-
-```{r,echo=FALSE}
-g3<- ggplot(econ, aes(x=Date)) +
-  geom_line(aes(y=UNRATE, colour="unrate"))+
+g3<- ggplot(unrate, aes(x=DATE, y=UNRATE)) +
+  geom_line()+
    labs(
-    title = "Unemployment Rate in the U.S. from 2012 to 2022",
-    subtitle = "From 2012-2022",
+    title = "Unemployment Rate",
+    subtitle = "From 1948-2022",
     x = "Date",
-    y = "Percent (seasonally adjusted)")+
-    guides(colour=guide_legend(title="UNRATE")) 
+    y = "Percent")
 
-ggplotly(g3) %>%
-  layout(hovermode = "x")
+g4 <- ggplot(int.rate, aes(x=DATE, y=REAINTRATREARAT10Y)) +
+  geom_line()+
+   labs(
+    title = "Real Interest Rate",
+    subtitle = "From 1982-2022",
+    x = "Date",
+    y = "Percent")
+
+g5 <- ggplot(inflation, aes(x=DATE, y=T10YIE)) +
+  geom_line()+
+   labs(
+    title = "Breakeven Inflation",
+    subtitle = "From 2003-2022",
+    x = "Date",
+    y = "Percent")
+
+grid.arrange(g1,g2, g3, g4, g5, nrow=2)
 ```
+
 
 # Works Cited
 
 Sofia Pitt, Meta shares plunge 24% to the lowest price since 2016, CNBC, Oct 27, 2022, https://www.cnbc.com/2022/10/27/meta-stock-falls-23percent-on-earnings-miss-analyst-downgrades.html
 
-Q.ai, What Happened To Crypto? How The House Of Cards Is Falling, Forbes, Dec 18, 2022, https://www.forbes.com/sites/qai/2022/12/18/what-happened-to-crypto-how-the-house-of-cards-is-falling/?sh=534e724339c2
+Anne Burdakin, Apr 5, 2020, Why Simon Property Group Plummeted 55% in March, https://www.fool.com/investing/2020/04/05/why-simon-property-group-plummeted-55-in-march.aspx
+
