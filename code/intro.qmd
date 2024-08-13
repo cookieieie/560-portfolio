@@ -2,7 +2,7 @@
 title: "Introduction"
 ---
 
-## Backgrounds
+## Background Information
 
 ![](stock.jpeg)
 
@@ -17,9 +17,9 @@ Specifically, the Dow contains 30 stocks, and it is represented by a very large 
 
 With the specific of interest in Meta's stock prices, this portfolio uses this interest as a starting point to discover the factors that could potentially impact different stock prices in the stock market overall. Five main stock sectors will be discovered and explored throughout this portfolio: the technology sector, the health care sector, the energy sector, the real estate sector, and the telecommunications sector. Two outside factors will be used as predictor variables to forecast stock prices in the models, the economic factors and weather factors. For the economic factors, Gross Domestic Product (GDP), Consumer Price Index (CPI), unemployment rate, interest rate, and inflation are selected. For the weather factors, drought, flooding, severe storm, and tropical cyclone are selected. More details and implementations of these variables will be discussed in the following pages of this portfolio.  
 
-## Important Questions
+## 10 Important Questions
 
-1.  Are we able to predict Meta's stock prices for the next three year based on current available stock prices?
+1.  Are we able to predict Meta's stock prices for the next three years based on current available stock prices?
 2.  Are we able to predict UnitedHealth Group's stock prices for the next three year based on current available stock prices?
 3.  Are we able to predict Exxon Mobil's stock prices for the next three years based on current available stock prices?
 4.  Are we able to predict Extra Space Storage Inc's stock prices for the next three years based on current available stock prices?
